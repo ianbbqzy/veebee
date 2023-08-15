@@ -1,0 +1,124 @@
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from functools import wraps
+from flask import request, jsonify
+import firebase_admin
+from firebase_admin import auth, credentials
+from requests import exceptions
+from dotenv import load_dotenv
+from services import UsersService
+from services import OCRService
+from services import TranslationService
+import os
+
+load_dotenv()
+hard_limit = 1000
+
+# Initialize Firebase Admin SDK with your service account credentials
+cred = credentials.Certificate('firebaseServiceAccountKey.json')
+firebase_admin.initialize_app(cred)
+
+# Decorator function to authenticate API requests
+def authenticate(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        # Get the authorization header from the request
+        auth_header = request.headers.get('Authorization')
+        
+        if not auth_header:
+            return jsonify({'error': 'Unauthorized'}), 401
+        
+        try:
+            # Extract the ID token from the authorization header
+            id_token = auth_header.split(' ')[1]
+            
+            # Verify the ID token using Firebase Authentication
+            decoded_token = auth.verify_id_token(id_token, check_revoked=True)
+            
+            # Add the user's UID to the request context
+            kwargs['user_id'] = decoded_token['uid']
+            
+            return func(*args, **kwargs)
+        except (auth.InvalidIdTokenError, IndexError, ValueError, exceptions.RequestException) as e:
+            print(e)
+            return jsonify({'error': 'Token might have expired. Please sign in again.'}), 401
+    
+    return wrapper
+
+# Replace with your actual keys
+
+app = Flask(__name__)
+CORS(app)
+users_service = UsersService(hard_limit=hard_limit)
+ocr_service = OCRService()
+translation_serivce = TranslationService(os.getenv("OPENAI_API_KEY"), os.getenv("DEEPL_API_KEY"))
+
+@app.route("/translate-text", methods=["POST"])
+@authenticate
+def translate_text(user_id):
+    source_lang = request.args.get('source_lang')
+    target_lang = request.args.get('target_lang', 'English')  # Added target_lang argument
+    request_count, limit = users_service.get_request_count(user_id)
+    if request_count > limit:
+        return jsonify({"error": f"You have exceeded your monthly request limit: {str(limit)}"}), 403
+    users_service.increment_request_count(user_id)
+    text = request.json.get('text')
+    if source_lang not in ["Japanese", "Korean", "Chinese"]:
+        return jsonify({"error": "Unsupported language"}), 400
+    api = request.args.get('api')
+    if api == "gpt":
+        try:
+            translation = translation_serivce.call_gpt(text, source_lang, target_lang)  # Pass target_lang to the service
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+    elif api == "deepl":
+        try:
+            translation = translation_serivce.call_deepl(text, source_lang, target_lang)  # Pass target_lang to the service
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+    else:
+        return jsonify({"error": "Invalid API"}), 400
+    users_service.store_request_data(user_id, text, translation, "text", api)
+    return jsonify({"translation": translation})
+
+@app.route("/translate-img", methods=["POST"])
+@authenticate
+def translate_img(user_id):
+    source_lang = request.args.get('source_lang')
+    target_lang = request.args.get('target_lang', 'English')  # Added target_lang argument
+    request_count, limit = users_service.get_request_count(user_id)
+    if request_count > limit:
+        return jsonify({"error": f"You have exceeded your monthly request limit: {str(limit)}"}), 403
+    users_service.increment_request_count(user_id)
+    image_data_url = request.json.get('imageDataUrl')
+    print(source_lang)
+    if source_lang not in ["Japanese", "Korean", "Chinese"]:
+        return jsonify({"error": "Unsupported language"}), 400
+    try:
+        text = ocr_service.annotate_image(image_data_url, source_lang)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    api = request.args.get('api')
+    if api == "gpt":
+        try:
+            translation = translation_serivce.call_gpt(text, source_lang, target_lang)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+    elif api == "deepl":
+        try:
+            translation = translation_serivce.call_deepl(text, source_lang, target_lang)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+    else:
+        return jsonify({"error": "Invalid API"}), 400
+    users_service.store_request_data(user_id, text, translation, "image", api)
+    return jsonify({"translation": translation, "original": text})
+
+@app.route("/get-user-limit", methods=["GET"])
+@authenticate
+def get_user_limit(user_id):
+    request_count, limit = users_service.get_request_count(user_id)
+    return jsonify({"request_count": request_count, "limit": limit})
+
+if __name__ == "__main__":
+    app.run(port=3000)

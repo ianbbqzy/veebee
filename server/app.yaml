@@ -1,0 +1,9 @@
+runtime: python39
+instance_class: F4_1G
+entrypoint: gunicorn -b :$PORT main:app
+automatic_scaling:
+   min_instances: 1
+
+handlers:
+- url: /.*
+  script: auto

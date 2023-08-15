@@ -1,0 +1,16 @@
+npm-debug.log
+coverage/
+node_modules/
+package-lock.json
+/vendor/
+/*.zip
+dist/
+.env
+
+server/.env
+server/firebaseServiceAccountKey.json
+server/.env
+server/data
+**/__pycache__/**
+server/.venv
+server/model/*

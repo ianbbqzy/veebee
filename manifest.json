@@ -1,0 +1,69 @@
+{
+  "manifest_version": 3,
+  "name"            : "Manga Reader",
+  "version"         : "1.2",
+  "description"     : "Manga Reader",
+
+  "icons": {
+    "16" : "/icons/dark/16x16.png",
+    "19" : "/icons/dark/19x19.png",
+    "38" : "/icons/dark/38x38.png",
+    "48" : "/icons/dark/48x48.png",
+    "128": "/icons/dark/128x128.png"
+  },
+
+  "action": {
+    "default_icon": {
+      "16" : "/icons/dark/16x16.png",
+      "19" : "/icons/dark/19x19.png",
+      "38" : "/icons/dark/38x38.png",
+      "48" : "/icons/dark/48x48.png",
+      "128" : "/icons/dark/128x128.png"
+    },
+    "default_title": "Manga Reader"
+  },
+
+  "background" : {
+    "service_worker": "background.js"
+  },
+
+  "options_page": "options.html",
+
+  "web_accessible_resources": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "resources": [
+        "/icons/Jcrop.gif",
+        "/icons/pixel.png"
+      ]
+    }
+  ],
+
+  "commands": {
+    "take-screenshot": {
+      "description": "Take Screenshot",
+      "suggested_key": {
+        "default": "Alt+S"
+      }
+    }
+  },
+
+  "permissions": [
+    "storage",
+    "scripting",
+    "activeTab",
+    "identity",
+    "contextMenus"
+  ],
+
+  "oauth2": {
+    "client_id": "__CLIENT_ID__",
+    "scopes": [
+      "https://www.googleapis.com/auth/userinfo.email",
+      "https://www.googleapis.com/auth/userinfo.profile"
+    ]
+  },
+  "key": "__EXTENSION_KEY__"
+}
