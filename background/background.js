@@ -109,6 +109,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
 });
 
+// Modify the callTranslateWithText function
 async function callTranslateWithText(text, source_lang, target_lang, api, idToken) {
   const url = "__BACKEND_URL__";
   const headers = new Headers();
@@ -126,7 +127,7 @@ async function callTranslateWithText(text, source_lang, target_lang, api, idToke
     if (resp.error) {
       return `Translation: ${resp.error}`;
     }
-    return `Translation: ${resp.translation}`;
+    return {"translation": resp.translation, "pronunciation": resp.pronunciation};
   } catch (err) {
     return `Translation: ${err.message}`;
   }
