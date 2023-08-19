@@ -6,10 +6,10 @@ import firebase_admin
 from firebase_admin import auth, credentials
 from requests import exceptions
 from dotenv import load_dotenv
-from services import UsersService
-from services import OCRService
-from services import TranslationService
-from services import AudioService  # Add import for the new service
+from services.users_service import UsersService
+from services.ocr_service import OCRService
+from services.translation_service import TranslationService
+from services.audio_service import AudioService  # Add import for the new service
 import os
 
 load_dotenv()

@@ -33,11 +33,11 @@ chrome.runtime.onMessage.addListener((req, sender, res) => {
     }
   } else if (req.message === "initTextTranslation") {
     // translation requested
-    showTextTranslationDialog("translating")
+    showTextTranslationDialog("translating", undefined)
   } else {
     // If neither of the above, the message is the result
     // of the translation request. It could also be an error message.
-    showTextTranslationDialog(req.message)
+    showTextTranslationDialog(req.message.translation, req.message.pronunciation)
   }
   return true
 })
@@ -87,12 +87,12 @@ var capture = () => {
 
       chrome.runtime.sendMessage({message: 'capture'}, (res) => {
         if (!config.idToken) {
-          showTranslationDialog("Please login first. Right click on the extension icon and click on options.", coordinates, "")
+          showTranslationDialog("Please login first. Right click on the extension icon and click on options.", coordinates, "", undefined, "emptyTranslationOverlay")
         } else {
           crop(res.image, coordinates, (image) => {
             getTranslation(image, coordinates, config.api, config.idToken, config.source_lang, config.target_lang)
           })
-          showTranslationDialog("translating", coordinates, "")
+          showTranslationDialog("translating", coordinates, "", undefined)
         }
 
       })
@@ -116,11 +116,11 @@ async function callTranslateWithScreenshot(image, source_lang, target_lang, api,
     }).then(res => res.json())
 
     if (resp.error) {
-      return `Translation: ${resp.error}`;
+      return {"translation": `Translation: ${resp.error}`, pronunciation: undefined};
     }
     return {"translation": resp.translation, "original": resp.original, "pronunciation": resp.pronunciation};
   } catch (err) {
-    return `Translation: ${err.message}`;
+    return {"translation": `Translation:  ${err.message}`, pronunciation: undefined};
   }
 }
 
@@ -128,14 +128,14 @@ var getTranslation = async (image, coordinates, api, idToken, source_lang, targe
   callTranslateWithScreenshot(image, source_lang, target_lang, api, idToken)
   .then(response => {
     if (response.translation) {
-      showTranslationDialog(response, coordinates, response.original)
+      showTranslationDialog(response.translation, coordinates, response.original, undefined)
     } else {
-      showTranslationDialog(response, coordinates, "")
+      showTranslationDialog(`Error: translation is not valid: ${response}`, coordinates, "", undefined)
     }
   })
   .catch(error => {
     console.error(`Error: ${error.message}`);
-    showTranslationDialog(`Error: ${error.message}`, coordinates, "")
+    showTranslationDialog(`Error: ${error.message}`, coordinates, "", undefined)
   });
 }
 
@@ -144,7 +144,7 @@ window.addEventListener('resize', ((timeout) => () => {
   init(() => jcropOverlay(null))
 })())
 
-function showTextTranslationDialog(translation) {
+function showTextTranslationDialog(translation, pronunciation) {
   const selection = window.getSelection();
   if (!selection) {
     console.log("Nothing was selected");
@@ -162,7 +162,7 @@ function showTextTranslationDialog(translation) {
       y: overlayRect.top,
       x2: overlayRect.right,
       y2: overlayRect.bottom,
-    }, selection.toString(), "testTranslationOverlay");
+    }, selection.toString(), pronunciation, "testTranslationOverlay");
   } else {
     console.log("Selection is not inside an existing overlay")
     showTranslationDialog(translation, {
@@ -170,11 +170,11 @@ function showTextTranslationDialog(translation) {
       y: rect.top,
       x2: rect.right,
       y2: rect.bottom,
-    }, selection.toString(), "testTranslationOverlay");
+    }, selection.toString(), pronunciation, "testTranslationOverlay");
   }
 }
 
-function showTranslationDialog(translation, coordinates, original, overlayID = 'overlay') {
+function showTranslationDialog(translation, coordinates, original, pronunciation, overlayID = 'overlay') {
   const viewportWidth = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
   const viewportCenterX = (viewportWidth / 2) + window.scrollX;
   const rectCenterX = (coordinates.x + coordinates.x2) / 2;
@@ -201,8 +201,8 @@ function showTranslationDialog(translation, coordinates, original, overlayID = '
   `;
 
   overlay.innerHTML = `
-    <p id="translation${overlayID}">${translation.translation}</p>
-    <audio id="pronunciation${overlayID}" src="data:audio/mp3;base64,${translation.pronunciation}" style="display: none;"></audio>
+    <p id="translation${overlayID}">${translation}</p>
+    <audio id="pronunciation${overlayID}" src="data:audio/mp3;base64,${pronunciation}" style="display: none;"></audio>
     <div class="overlay-controls" style="position: absolute; top: 5px; right: 5px; display: flex;">
         <button id="playButton${overlayID}" style="margin-right: 5px;">Play Pronunciation</button>
         <button id="toggleButton${overlayID}" style="margin-right: 5px;">Toggle</button>
@@ -235,6 +235,11 @@ function restoreOverlay(overlayID) {
 function attachEventListeners(overlayID) {
   const overlay = document.querySelector("#" + overlayID);
 
+    document.querySelector("#playButton" + overlayID).addEventListener("click", () => {
+        const audioElement = document.querySelector("#pronunciation" + overlayID);
+        audioElement.play();
+});
+
   document.querySelector("#overlay-minimize-button" + overlayID).addEventListener("click", () => minimizeOverlay(overlayID));
   document.querySelector("#overlay-close-button" + overlayID).addEventListener("click", () => overlay.remove());
 
@@ -251,8 +256,6 @@ function attachEventListeners(overlayID) {
 
 function crop (image, area, done) {
   const dpr = devicePixelRatio
-  console.log("area")
-  console.log(area)
   var top = area.y * dpr
   var left = area.x * dpr
   var width = area.w * dpr

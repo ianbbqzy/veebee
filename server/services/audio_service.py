@@ -8,7 +8,7 @@ class AudioService:
     def generate_pronunciation(self, text, lang):
         synthesis_input = texttospeech.SynthesisInput(text=text)
         voice = texttospeech.VoiceSelectionParams(
-            language_code=lang,
+            language_code="ja-JP",
             ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL)
         audio_config = texttospeech.AudioConfig(
             audio_encoding=texttospeech.AudioEncoding.MP3)

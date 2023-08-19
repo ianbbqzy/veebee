@@ -84,7 +84,6 @@ chrome.runtime.onInstalled.addListener(() => {
 
 // Handle when context menu is clicked
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  console.log(info.menuItemId)
   if (info.menuItemId === "translate-menu") {
     // Let content script know that a text translation is initialized.
     // This has to be done in background script in case the content
@@ -94,7 +93,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     // continue with the translation process.
     chrome.storage.sync.get((config) => {
       if (!config.idToken) {
-        pingContentScript(tab, "Please login first. Right click on the extension icon and click on options.")
+        pingContentScript(tab, {"translation": "Please login first. Right click on the extension icon and click on options.", pronunciation: undefined});
       } else {
         callTranslateWithText(info.selectionText, config.source_lang, config.target_lang, config.api, config.idToken)
         .then(response => {
@@ -102,7 +101,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         })
         .catch(error => {
           console.error(`error: ${error.message}`);
-          pingContentScript(tab, `error: ${error.message}`)
+          pingContentScript(tab, {"translation": `Translation: ${error.message}`, pronunciation: undefined});
         });
       }
     })
@@ -125,11 +124,15 @@ async function callTranslateWithText(text, source_lang, target_lang, api, idToke
       })
     }).then(res => res.json())
     if (resp.error) {
-      return `Translation: ${resp.error}`;
+      return {"translation": `Translation: ${resp.error}`, pronunciation: undefined};
     }
-    return {"translation": resp.translation, "pronunciation": resp.pronunciation};
+    if (resp.translation) {
+      return {"translation": resp.translation, "pronunciation": resp.pronunciation};
+    } else {
+      return {"translation": `Error: translation is not valid: ${resp}`, "pronunciation": resp.pronunciation};
+    }
   } catch (err) {
-    return `Translation: ${err.message}`;
+    return {"translation": `Translation: ${err.message}`, pronunciation: undefined};
   }
 }
 
