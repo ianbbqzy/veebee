@@ -14,3 +14,4 @@ server/data
 **/__pycache__/**
 server/.venv
 server/model/*
+server/comic_text_detector/data

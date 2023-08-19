@@ -90,7 +90,8 @@ var capture = () => {
           showTranslationDialog("Please login first. Right click on the extension icon and click on options.", coordinates, "", undefined, "emptyTranslationOverlay")
         } else {
           crop(res.image, coordinates, (image) => {
-            getTranslation(image, coordinates, config.api, config.idToken, config.source_lang, config.target_lang)
+            // getTranslation(image, coordinates, config.api, config.idToken, config.source_lang, config.target_lang)
+            getTranslations(image, coordinates, config.api, config.idToken, config.source_lang, config.target_lang)
           })
           showTranslationDialog("translating", coordinates, "", undefined)
         }
@@ -98,6 +99,58 @@ var capture = () => {
       })
     }
   })
+}
+
+async function callTranslateAllWithScreenshot(image, source_lang, target_lang, api, idToken, coordinates) {
+  const url = process.env.BACKEND_URL;
+  const headers = new Headers();
+  headers.append('Authorization', `Bearer ${idToken}`);
+  headers.append('Content-Type', `application/json`);
+
+  try {
+    const resp = await fetch(url + '/translate-img-all?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({
+        'imageDataUrl': image,
+        'scrollX': window.scrollX,
+        'scrollY': window.scrollY,
+        'coordinates': coordinates,
+      })
+    }).then(res => res.json())
+
+    if (resp.error) {
+      return {"translation": `Translation: ${resp.error}`, pronunciation: undefined};
+    }
+    return resp;
+  } catch (err) {
+    return {"translation": `Translation:  ${err.message}`, pronunciation: undefined};
+  }
+}
+
+var getTranslations = async (image, coordinates, api, idToken, source_lang, target_lang) => {
+  callTranslateAllWithScreenshot(image, source_lang, target_lang, api, idToken, coordinates)
+  .then(response => {
+    if (response.translations) {
+      for (var i = 0; i < response.translations.length; i++) {
+        var translation = response.translations[i];
+        const ith_coordinates = {
+          x: translation['bounding_box'][0] + coordinates.x,
+          y: translation['bounding_box'][1] + coordinates.y,
+          x2: translation['bounding_box'][0] + translation['bounding_box'][2] + coordinates.x,
+          y2: translation['bounding_box'][1] + translation['bounding_box'][3] + coordinates.y,
+        };
+        console.log(translation)
+        showTranslationDialog(translation.translation, ith_coordinates, translation.original, undefined, "overlay" + i);
+      }
+    } else {
+      showTranslationDialog(`Error: translation is not valid: ${response}`, coordinates, "", undefined)
+    }
+  })
+  .catch(error => {
+    console.error(`Error: ${error.message}`);
+    showTranslationDialog(`Error: ${error.message}`, coordinates, "", undefined)
+  });
 }
 
 async function callTranslateWithScreenshot(image, source_lang, target_lang, api, idToken) {
@@ -178,8 +231,11 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
   const viewportWidth = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
   const viewportCenterX = (viewportWidth / 2) + window.scrollX;
   const rectCenterX = (coordinates.x + coordinates.x2) / 2;
-
-  const spawnX = rectCenterX <= viewportCenterX
+  console.log("rectCenterX: " + rectCenterX)
+  console.log("viewportCenterX: " + viewportCenterX);
+  const spawnRight = rectCenterX <= viewportCenterX;
+  console.log("spawnRight: " + spawnRight);
+  const spawnX = spawnRight
       ? coordinates.x2 + window.scrollX
       : coordinates.x - 300 + window.scrollX;
 
@@ -201,7 +257,7 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
   `;
 
   overlay.innerHTML = `
-    <p id="translation${overlayID}">${translation}</p>
+    <p id="translation${overlayID}">${spawnRight}${translation}</p>
     <audio id="pronunciation${overlayID}" src="data:audio/mp3;base64,${pronunciation}" style="display: none;"></audio>
     <div class="overlay-controls" style="position: absolute; top: 5px; right: 5px; display: flex;">
         <button id="playButton${overlayID}" style="margin-right: 5px;">Play Pronunciation</button>
@@ -212,27 +268,34 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
     <p id="original${overlayID}" contentEditable="true" style="display: none;">${original}</p>
   `;
   document.body.appendChild(overlay);
-  attachEventListeners(overlayID);
+  attachEventListeners(overlayID, spawnRight);
+  // document.querySelector("#overlay-minimize-button" + overlayID).click();
 }
 
-function minimizeOverlay(overlayID) {
+function minimizeOverlay(overlayID, spawnRight) {
   const overlay = document.querySelector("#" + overlayID);
   overlay.dataset.initialHtml = overlay.innerHTML;
   overlay.style.width = "30px";
   overlay.style.height = "30px";
+  if (spawnRight === false) {
+    overlay.style.left = (parseInt(overlay.style.left.replace("px", ""), 10) + 300) + "px";
+  }
   overlay.innerHTML = `<button id="overlay-restore-button${overlayID}" style="position: absolute; top: 5px; right: 5px;">+</button>`;
-  document.querySelector("#overlay-restore-button" + overlayID).addEventListener("click", () => restoreOverlay(overlayID));
+  document.querySelector("#overlay-restore-button" + overlayID).addEventListener("click", () => restoreOverlay(overlayID, spawnRight));
 }
 
-function restoreOverlay(overlayID) {
+function restoreOverlay(overlayID, spawnRight) {
   const overlay = document.querySelector("#" + overlayID);
   overlay.style.width = "300px";
   overlay.style.height = "auto";
+  if (spawnRight === false) {
+    overlay.style.left = (parseInt(overlay.style.left.replace("px", ""), 10) - 300) + "px";
+  }
   overlay.innerHTML = overlay.dataset.initialHtml;
   attachEventListeners(overlayID);
 }
 
-function attachEventListeners(overlayID) {
+function attachEventListeners(overlayID, spawnRight) {
   const overlay = document.querySelector("#" + overlayID);
 
     document.querySelector("#playButton" + overlayID).addEventListener("click", () => {
@@ -240,7 +303,7 @@ function attachEventListeners(overlayID) {
         audioElement.play();
 });
 
-  document.querySelector("#overlay-minimize-button" + overlayID).addEventListener("click", () => minimizeOverlay(overlayID));
+  document.querySelector("#overlay-minimize-button" + overlayID).addEventListener("click", () => minimizeOverlay(overlayID, spawnRight));
   document.querySelector("#overlay-close-button" + overlayID).addEventListener("click", () => overlay.remove());
 
   const toggleButton = document.getElementById("toggleButton" + overlayID);
