@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from services import UsersService
 from services import OCRService
 from services import TranslationService
+from services import AudioService  # Add import for the new service
 import os
 
 load_dotenv()
@@ -52,6 +53,7 @@ CORS(app)
 users_service = UsersService(hard_limit=hard_limit)
 ocr_service = OCRService()
 translation_serivce = TranslationService(os.getenv("OPENAI_API_KEY"), os.getenv("DEEPL_API_KEY"))
+audio_service = AudioService()  # Initialize the new service
 
 @app.route("/translate-text", methods=["POST"])
 @authenticate
@@ -79,7 +81,8 @@ def translate_text(user_id):
     else:
         return jsonify({"error": "Invalid API"}), 400
     users_service.store_request_data(user_id, text, translation, "text", api)
-    return jsonify({"translation": translation})
+    pronunciation = audio_service.generate_pronunciation(text, source_lang)  # New code
+    return jsonify({"translation": translation, "pronunciation": pronunciation})  # Modified return
 
 @app.route("/translate-img", methods=["POST"])
 @authenticate
@@ -112,7 +115,8 @@ def translate_img(user_id):
     else:
         return jsonify({"error": "Invalid API"}), 400
     users_service.store_request_data(user_id, text, translation, "image", api)
-    return jsonify({"translation": translation, "original": text})
+    pronunciation = audio_service.generate_pronunciation(text, source_lang)  # New code
+    return jsonify({"translation": translation, "original": text, "pronunciation": pronunciation})  # Modified return
 
 @app.route("/get-user-limit", methods=["GET"])
 @authenticate
