@@ -129,6 +129,7 @@ var getTranslation = async (image, coordinates, api, idToken, source_lang, targe
   .then(response => {
     if (response.translation) {
       showTranslationDialog(response.translation, coordinates, response.original, undefined)
+      chrome.runtime.sendMessage({message: 'translation', translation: response.translation, pronunciation: response.pronunciation});
     } else {
       showTranslationDialog(`Error: translation is not valid: ${response}`, coordinates, "", undefined)
     }
