@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      width: 300px;
+      height: 600px;
+      margin: 0;
+      padding: 0;
+      font-size: 16px;
+    }
+    #translation {
+      white-space: pre-wrap;
+    }
+    .overlay-controls {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <p id="translation"></p>
+  <audio id="pronunciation" style="display: none;"></audio>
+  <div class="overlay-controls">
+    <button id="playButton">Play Pronunciation</button>
+  </div>
+  <script src="sidebar.js"></script>
+</body>
+</html>
