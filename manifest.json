@@ -36,7 +36,9 @@
       ],
       "resources": [
         "/icons/Jcrop.gif",
-        "/icons/pixel.png"
+        "/icons/pixel.png",
+        "sidebar.html",
+        "sidebar.js"
       ]
     }
   ],
@@ -55,7 +57,8 @@
     "scripting",
     "activeTab",
     "identity",
-    "contextMenus"
+    "contextMenus",
+    "windows"
   ],
 
   "oauth2": {
