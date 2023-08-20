@@ -32,6 +32,13 @@ chrome.storage.sync.get((config) => {
 // for screenshot capture. 
 // It injects the content script into the active tab.
 chrome.action.onClicked.addListener((tab) => {
+  chrome.windows.create({
+    url: chrome.runtime.getURL('sidebar.html'),
+    type: 'panel',
+    focused: true,
+    width: 300,
+    height: 600
+  });
   pingContentScript(tab, 'initCrop');
 })
 
