@@ -1,7 +1,7 @@
 
 # Veebee Browser Extension
 
-Uses Google Vision, DeepL, GPT, and [manga-ocr](https://github.com/kha-white/manga-ocr) to help you with translating and/or learning new languages while browing the internet in a Chrome Browser. One great use case is for reading manga/manhwa/manhua but you can use it on almost any content on the web.
+Uses Google Vision, DeepL, GPT, [comic-text-detector](https://github.com/dmMaze/comic-text-detector), and [manga-ocr](https://github.com/kha-white/manga-ocr) to help you with translating and/or learning new languages while browing the internet in a Chrome Browser. One great use case is for reading manga/manhwa/manhua but you can use it on almost any content on the web.
 
 ![](assets/example.png)
 
