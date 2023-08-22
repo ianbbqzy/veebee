@@ -16,6 +16,8 @@ from services.audio_service import AudioService  # Add import for the new servic
 import os
 from comic_text_detector.inference import model2annotations
 import re
+from concurrent.futures import ThreadPoolExecutor
+import multiprocessing
 
 load_dotenv()
 hard_limit = 1000
@@ -141,27 +143,33 @@ def translate_img_all(user_id):
     
     results = ocr_service.annotate_multiple_images(image_data_url, [coordinates['w'], coordinates['h']], model2annotations(model_path, image_data_url, save_json=False), source_lang)
 
-    for ocr_result in results:
-        api = request.args.get('api')
-        if api == "gpt":
+    # Determine the function to be executed based on the 'api' variable
+    api = request.args.get('api')
+    if api == "gpt":
+        func = translation_serivce.call_gpt
+    elif api == "deepl":
+        func = translation_serivce.call_deepl
+    else:
+        return jsonify({"error": "Invalid API"}), 400
+
+    # Create a ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
+        futures = []
+        for ocr_result in results:
+            futures.append(executor.submit(func, ocr_result['original'], source_lang, target_lang))
+
+        for i, future in enumerate(futures):
             try:
-                translation = translation_serivce.call_gpt(ocr_result['original'], source_lang, target_lang)
+                translation = future.result()
             except ValueError as e:
                 return jsonify({"error": str(e)}), 400
-        elif api == "deepl":
-            try:
-                translation = translation_serivce.call_deepl(ocr_result['original'], source_lang, target_lang)
-            except ValueError as e:
-                return jsonify({"error": str(e)}), 400
-        else:
-            return jsonify({"error": "Invalid API"}), 400
-        users_service.store_request_data(user_id, ocr_result['original'], translation, "image", api)
-        pronunciation = audio_service.generate_pronunciation(ocr_result['original'], source_lang)
-        ocr_result['translation'] = translation
-        ocr_result['pronunciation'] = pronunciation
+
+            users_service.store_request_data(user_id, results[i]['original'], translation, "image", api)
+            pronunciation = audio_service.generate_pronunciation(results[i]['original'], source_lang)
+            results[i]['translation'] = translation
+            results[i]['pronunciation'] = pronunciation
 
     return jsonify({'translations': results, "coordinates": coordinates, "scroll_x": scroll_x, "scroll_y": scroll_y})  # Modified return
-
 
 @app.route("/get-user-limit", methods=["GET"])
 @authenticate
