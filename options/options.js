@@ -35,6 +35,15 @@ var state = {
     {id: 'gpt', title: 'GPT (For in-depth translation)'},
     {id: 'deepl', title: 'DeepL (For quick translation)'}
   ],
+  capture_mode: [
+    {id: 'single', title: 'Capture a single text bubble'},
+    {id: 'multiple', title: 'Capture multiple text bubbles'},
+    {id: 'screen', title: 'Capture the entire screen'}
+  ],
+  pronunciation: [
+    {id: 'on', title: 'On'},
+    {id: 'off', title: 'Off'}
+  ],
   source_lang: [
     {id: 'Japanese', title: 'Japanese'},
     {id: 'Korean', title: 'Korean'},
@@ -56,6 +65,8 @@ var state = {
 // Set the state of the options page based on the current config
 chrome.storage.sync.get((config) => {
   state.api.forEach((item) => item.checked = item.id === config.api)
+  state.capture_mode.forEach((item) => item.checked = item.id === config.capture_mode)
+  state.pronunciation.forEach((item) => item.checked = item.id === config.pronunciation)
   state.source_lang.forEach((item) => item.checked = item.id === config.source_lang)
   state.target_lang.forEach((item) => item.checked = item.id === config.target_lang)
   state.icon.forEach((item) => item.checked = item.id === config.icon)
@@ -133,6 +144,46 @@ m.mount(document.querySelector('main'), {
               type: 'radio', name: 'api',
               checked: item.checked && 'checked',
               onchange: events.option('api', item)
+            }),
+            m('.mdc-radio__background',
+              m('.mdc-radio__outer-circle'),
+              m('.mdc-radio__inner-circle'),
+            ),
+          ),
+          m('span', item.title)
+        )
+      )
+    ),
+
+    m('.bs-callout',
+      m('h4.mdc-typography--headline5', 'Capture Mode'),
+      state.capture_mode.map((item) =>
+        m('label.s-label', {onupdate: onupdate(item)},
+          m('.mdc-radio',
+            m('input.mdc-radio__native-control', {
+              type: 'radio', name: 'capture_mode',
+              checked: item.checked && 'checked',
+              onchange: events.option('capture_mode', item)
+            }),
+            m('.mdc-radio__background',
+              m('.mdc-radio__outer-circle'),
+              m('.mdc-radio__inner-circle'),
+            ),
+          ),
+          m('span', item.title)
+        )
+      )
+    ),
+
+    m('.bs-callout',
+      m('h4.mdc-typography--headline5', 'Pronunciation'),
+      state.pronunciation.map((item) =>
+        m('label.s-label', {onupdate: onupdate(item)},
+          m('.mdc-radio',
+            m('input.mdc-radio__native-control', {
+              type: 'radio', name: 'pronunciation',
+              checked: item.checked && 'checked',
+              onchange: events.option('pronunciation', item)
             }),
             m('.mdc-radio__background',
               m('.mdc-radio__outer-circle'),

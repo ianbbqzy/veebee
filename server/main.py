@@ -1,9 +1,12 @@
+import base64
+from io import BytesIO
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from functools import wraps
 from flask import request, jsonify
 import firebase_admin
 from firebase_admin import auth, credentials
+from PIL import Image
 from requests import exceptions
 from dotenv import load_dotenv
 from services.users_service import UsersService
@@ -11,6 +14,8 @@ from services.ocr_service import OCRService
 from services.translation_service import TranslationService
 from services.audio_service import AudioService  # Add import for the new service
 import os
+from comic_text_detector.inference import model2annotations
+import re
 
 load_dotenv()
 hard_limit = 1000
@@ -115,8 +120,48 @@ def translate_img(user_id):
     else:
         return jsonify({"error": "Invalid API"}), 400
     users_service.store_request_data(user_id, text, translation, "image", api)
-    pronunciation = audio_service.generate_pronunciation(text, source_lang)  # New code
+    pronunciation = audio_service.generate_pronunciation(text, source_lang)
     return jsonify({"translation": translation, "original": text, "pronunciation": pronunciation})  # Modified return
+
+@app.route("/translate-img-all", methods=["POST"])
+@authenticate
+def translate_img_all(user_id):
+    source_lang = request.args.get('source_lang')
+    target_lang = request.args.get('target_lang', 'English')  # Added target_lang argument
+    request_count, limit = users_service.get_request_count(user_id)
+    if request_count > limit:
+        return jsonify({"error": f"You have exceeded your monthly request limit: {str(limit)}"}), 403
+    users_service.increment_request_count(user_id)
+    image_data_url = request.json.get('imageDataUrl')
+    scroll_x = request.json.get('scrollX')
+    scroll_y = request.json.get('scrollY')
+    coordinates = request.json.get('coordinates')
+
+    model_path = r'comic_text_detector/data/comictextdetector.pt.onnx'
+    
+    results = ocr_service.annotate_multiple_images(image_data_url, [coordinates['w'], coordinates['h']], model2annotations(model_path, image_data_url, save_json=False), source_lang)
+
+    for ocr_result in results:
+        api = request.args.get('api')
+        if api == "gpt":
+            try:
+                translation = translation_serivce.call_gpt(ocr_result['original'], source_lang, target_lang)
+            except ValueError as e:
+                return jsonify({"error": str(e)}), 400
+        elif api == "deepl":
+            try:
+                translation = translation_serivce.call_deepl(ocr_result['original'], source_lang, target_lang)
+            except ValueError as e:
+                return jsonify({"error": str(e)}), 400
+        else:
+            return jsonify({"error": "Invalid API"}), 400
+        users_service.store_request_data(user_id, ocr_result['original'], translation, "image", api)
+        pronunciation = audio_service.generate_pronunciation(ocr_result['original'], source_lang)
+        ocr_result['translation'] = translation
+        ocr_result['pronunciation'] = pronunciation
+
+    return jsonify({'translations': results, "coordinates": coordinates, "scroll_x": scroll_x, "scroll_y": scroll_y})  # Modified return
+
 
 @app.route("/get-user-limit", methods=["GET"])
 @authenticate

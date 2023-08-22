@@ -31,13 +31,27 @@ chrome.runtime.onMessage.addListener((req, sender, res) => {
       jcropOverlay()
       capture()
     }
+  } else if (req.message === "screenCapture") {
+    selection = {
+      x: 0,
+      y: 0,
+      x2: document.documentElement.clientWidth,
+      y2: document.documentElement.clientHeight,
+      w: document.documentElement.clientWidth,
+      h: document.documentElement.clientHeight,
+    }
+    capture()
   } else if (req.message === "initTextTranslation") {
     // translation requested
-    showTextTranslationDialog("translating", undefined)
+    showTextTranslationDialog("translating", undefined, "overlayTranslatingText")
   } else {
     // If neither of the above, the message is the result
     // of the translation request. It could also be an error message.
-    showTextTranslationDialog(req.message.translation, req.message.pronunciation)
+    if (req.message.error) {
+      showTextTranslationDialog(req.message.error)
+    } else {
+      showTextTranslationDialog(req.message.translation, req.message.pronunciation)
+    }
   }
   return true
 })
@@ -81,54 +95,86 @@ var capture = () => {
   chrome.storage.sync.get((config) => {
     if (selection) {
       const coordinates = {...selection}
-      jcrop.release()
+      jcrop && jcrop.release()
       selection = null
       jcropOverlay(false)
 
       chrome.runtime.sendMessage({message: 'capture'}, (res) => {
         if (!config.idToken) {
-          showTranslationDialog("Please login first. Right click on the extension icon and click on options.", coordinates, "", undefined, "emptyTranslationOverlay")
-        } else {
+          if (config.capture_mode !== "single") {
+            showTranslationDialog("Please login first. Right click on the extension icon and click on options.", 
+            {
+              x: document.documentElement.clientWidth / 2,
+              y: document.documentElement.clientHeight / 2,
+              x2: document.documentElement.clientWidth / 2,
+              y2: document.documentElement.clientHeight / 2,
+            }, "", undefined, "emptyTranslationOverlay")
+          } else {
+            showTranslationDialog("Please login first. Right click on the extension icon and click on options.", coordinates, "", undefined, "emptyTranslationOverlay")
+          }
+        } else {            
           crop(res.image, coordinates, (image) => {
-            getTranslation(image, coordinates, config.api, config.idToken, config.source_lang, config.target_lang)
+            if (config.capture_mode === "single") {
+              getTranslation(image, coordinates, config.api, config.idToken, config.source_lang, config.target_lang, config.pronunciation)
+            } else {
+              showTranslationDialog("translating", {
+                x: document.documentElement.clientWidth / 2,
+                y: document.documentElement.clientHeight / 2,
+                x2: document.documentElement.clientWidth / 2,
+                y2: document.documentElement.clientHeight / 2,
+              }, "", undefined)
+              getTranslations(image, coordinates, config.api, config.idToken, config.source_lang, config.target_lang, config.pronunciation)
+            }
           })
-          showTranslationDialog("translating", coordinates, "", undefined)
         }
-
       })
     }
   })
 }
 
-async function callTranslateWithScreenshot(image, source_lang, target_lang, api, idToken) {
+async function callTranslateAllWithScreenshot(image, source_lang, target_lang, api, idToken, coordinates, pronunciation) {
   const url = process.env.BACKEND_URL;
   const headers = new Headers();
   headers.append('Authorization', `Bearer ${idToken}`);
   headers.append('Content-Type', `application/json`);
 
   try {
-    const resp = await fetch(url + '/translate-img?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang, {
+    const resp = await fetch(url + '/translate-img-all?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({
-        'imageDataUrl': image
+        'imageDataUrl': image,
+        'scrollX': window.scrollX,
+        'scrollY': window.scrollY,
+        'coordinates': coordinates,
       })
     }).then(res => res.json())
 
     if (resp.error) {
-      return {"translation": `Translation: ${resp.error}`, pronunciation: undefined};
+      return {"error": `Translation: ${resp.error}`};
     }
-    return {"translation": resp.translation, "original": resp.original, "pronunciation": resp.pronunciation};
+    return resp;
   } catch (err) {
-    return {"translation": `Translation:  ${err.message}`, pronunciation: undefined};
+    return {"error": `Translation:  ${err.message}`};
   }
 }
 
-var getTranslation = async (image, coordinates, api, idToken, source_lang, target_lang) => {
-  callTranslateWithScreenshot(image, source_lang, target_lang, api, idToken)
+var getTranslations = async (image, coordinates, api, idToken, source_lang, target_lang, pronunciation) => {
+  callTranslateAllWithScreenshot(image, source_lang, target_lang, api, idToken, coordinates, pronunciation)
   .then(response => {
-    if (response.translation) {
-      showTranslationDialog(response.translation, coordinates, response.original, undefined)
+    if (response.error) {
+      showTranslationDialog(`Error: translation is not valid: ${response.error}`, coordinates, "", undefined)
+    } else if (response.translations) {
+      for (var i = 0; i < response.translations.length; i++) {
+        var translation = response.translations[i];
+        const ith_coordinates = {
+          x: translation['bounding_box'][0] + coordinates.x,
+          y: translation['bounding_box'][1] + coordinates.y,
+          x2: translation['bounding_box'][0] + translation['bounding_box'][2] + coordinates.x,
+          y2: translation['bounding_box'][1] + translation['bounding_box'][3] + coordinates.y,
+        };
+        showTranslationDialog(translation.translation, ith_coordinates, translation.original, undefined, "overlay" + i, true);
+      }
     } else {
       showTranslationDialog(`Error: translation is not valid: ${response}`, coordinates, "", undefined)
     }
@@ -139,12 +185,62 @@ var getTranslation = async (image, coordinates, api, idToken, source_lang, targe
   });
 }
 
+async function callTranslateWithScreenshot(image, source_lang, target_lang, api, idToken, pronunciation) {
+  const url = process.env.BACKEND_URL;
+  const headers = new Headers();
+  headers.append('Authorization', `Bearer ${idToken}`);
+  headers.append('Content-Type', `application/json`);
+
+  try {
+    const resp = await fetch(url + '/translate-img?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({
+        'imageDataUrl': image
+      })
+    }).then(res => res.json())
+
+    if (resp.error) {
+      return {"error": `Translation: ${resp.error}`};
+    }
+    return {"translation": resp.translation, "original": resp.original, "pronunciation": resp.pronunciation};
+  } catch (err) {
+    return {"error": `Translation:  ${err.message}`};
+  }
+}
+
+var getTranslation = async (image, coordinates, api, idToken, source_lang, target_lang, pronunciation) => {
+  const overlayId = "overlay" + Math.floor(Math.random() * 10000 + 1000);
+  
+  showTranslationDialog("translating", coordinates, "", undefined, overlayId)
+  callTranslateWithScreenshot(image, source_lang, target_lang, api, idToken, pronunciation)
+  .then(response => {
+    if (response.error) {
+      showTranslationDialog(`Error: translation is not valid: ${response.error}`, coordinates, "", undefined, overlayId)
+    } else if (response.translation) {
+      showTranslationDialog(response.translation, coordinates, response.original, response.pronunciation, overlayId)
+    } else {
+      showTranslationDialog(`Error: translation is not valid: ${response}`, coordinates, "", undefined, overlayId)
+    }
+  })
+  .catch(error => {
+    showTranslationDialog(`Error: ${error.message}`, coordinates, "", undefined, overlayId)
+  });
+}
+
 window.addEventListener('resize', ((timeout) => () => {
   jcrop.destroy()
   init(() => jcropOverlay(null))
 })())
 
-function showTextTranslationDialog(translation, pronunciation) {
+function showTextTranslationDialog(translation, pronunciation, overlayId) {
+
+  if (!overlayId) {
+    const existingOverlay = document.querySelector('#overlayTranslatingText');
+    if (existingOverlay) existingOverlay.remove();
+    overlayId = "overlay" + Math.floor(Math.random() * 10000 + 1);
+  }
+
   const selection = window.getSelection();
   if (!selection) {
     console.log("Nothing was selected");
@@ -152,9 +248,10 @@ function showTextTranslationDialog(translation, pronunciation) {
   }
   const rect = selection.getRangeAt(0).getBoundingClientRect();
 
-  const existingOverlay = document.querySelector("#overlay") || document.querySelector("#testTranslationOverlay");
-  if (existingOverlay && isSelectionInsideElement(existingOverlay)) {
-    const overlayRect = existingOverlay.getBoundingClientRect();
+  const existingOverlays = document.querySelectorAll("[id^='overlay']");
+  const parent = findParentOverlay(existingOverlays)
+  if (parent !== null) {
+    const overlayRect = parent.getBoundingClientRect();
 
     console.log("Selection is inside an existing overlay")
     showTranslationDialog(translation,{
@@ -162,7 +259,7 @@ function showTextTranslationDialog(translation, pronunciation) {
       y: overlayRect.top,
       x2: overlayRect.right,
       y2: overlayRect.bottom,
-    }, selection.toString(), pronunciation, "testTranslationOverlay");
+    }, selection.toString(), pronunciation, overlayId);
   } else {
     console.log("Selection is not inside an existing overlay")
     showTranslationDialog(translation, {
@@ -170,16 +267,16 @@ function showTextTranslationDialog(translation, pronunciation) {
       y: rect.top,
       x2: rect.right,
       y2: rect.bottom,
-    }, selection.toString(), pronunciation, "testTranslationOverlay");
+    }, selection.toString(), pronunciation, overlayId);
   }
 }
 
-function showTranslationDialog(translation, coordinates, original, pronunciation, overlayID = 'overlay') {
+function showTranslationDialog(translation, coordinates, original, pronunciation, overlayID = 'overlay', minimize = false) {
   const viewportWidth = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
   const viewportCenterX = (viewportWidth / 2) + window.scrollX;
   const rectCenterX = (coordinates.x + coordinates.x2) / 2;
-
-  const spawnX = rectCenterX <= viewportCenterX
+  const spawnRight = rectCenterX <= viewportCenterX;
+  const spawnX = spawnRight
       ? coordinates.x2 + window.scrollX
       : coordinates.x - 300 + window.scrollX;
 
@@ -188,65 +285,122 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
 
   const overlay = document.createElement('div');
   overlay.id = overlayID;
-  overlay.style.cssText = `
-      background-color: white;
-      font-size: 16px;
-      border: 1px solid #cccccc;
-      width: 300px;
-      white-space: pre-wrap;
-      position: absolute;
-      top: ${coordinates.y + window.scrollY}px;
-      left: ${spawnX}px;
-      z-index: 999;
-  `;
-
-  overlay.innerHTML = `
+  overlay.attachShadow({mode: 'open'}); // Attach a shadow root to the overlay
+  
+  // Apply styles to the shadow root
+  overlay.shadowRoot.innerHTML = `
+    <style>
+      :host {
+        display: flex;
+        flex-direction: column;
+        background-color: white;
+        font-size: 16px;
+        border: 1px solid #cccccc;
+        width: 300px;
+        position: absolute;
+        top: ${coordinates.y + window.scrollY}px;
+        left: ${spawnX}px;
+        z-index: 999;
+      }
+      #translation${overlayID} {
+        flex-grow: 1;
+        overflow: auto;
+        top: 10px;
+      }
+      /* Add other styles here */
+    </style>
+    <!-- Overlay content -->
+    <div class="overlay-controls" style="right: 5px; display: flex;">
+      <button id="playButton${overlayID}" style="margin-right: 5px;">Play Pronunciation</button>
+      <button id="toggleButton${overlayID}" style="margin-right: 5px;">Toggle</button>
+      <button id="overlay-minimize-button${overlayID}" style="margin-right: 5px;">–</button>
+      <button id="overlay-close-button${overlayID}">OK</button>
+    </div>
     <p id="translation${overlayID}">${translation}</p>
     <audio id="pronunciation${overlayID}" src="data:audio/mp3;base64,${pronunciation}" style="display: none;"></audio>
-    <div class="overlay-controls" style="position: absolute; top: 5px; right: 5px; display: flex;">
-        <button id="playButton${overlayID}" style="margin-right: 5px;">Play Pronunciation</button>
-        <button id="toggleButton${overlayID}" style="margin-right: 5px;">Toggle</button>
-        <button id="overlay-minimize-button${overlayID}" style="margin-right: 5px;">–</button>
-        <button id="overlay-close-button${overlayID}">OK</button>
-    </div>
     <p id="original${overlayID}" contentEditable="true" style="display: none;">${original}</p>
   `;
+  
+  // Append the overlay to the document body
   document.body.appendChild(overlay);
-  attachEventListeners(overlayID);
+  attachEventListeners(overlayID, spawnRight, spawnX);
+  if (minimize) {
+    minimizeOverlay(overlayID, spawnRight, spawnX)
+  }
 }
 
-function minimizeOverlay(overlayID) {
+function minimizeOverlay(overlayID, spawnRight, spawnX) {
   const overlay = document.querySelector("#" + overlayID);
-  overlay.dataset.initialHtml = overlay.innerHTML;
-  overlay.style.width = "30px";
-  overlay.style.height = "30px";
-  overlay.innerHTML = `<button id="overlay-restore-button${overlayID}" style="position: absolute; top: 5px; right: 5px;">+</button>`;
-  document.querySelector("#overlay-restore-button" + overlayID).addEventListener("click", () => restoreOverlay(overlayID));
+  const shadowRoot = overlay.shadowRoot;
+
+  // Extract the <style> tag from the original HTML
+  const styleTag = shadowRoot.querySelector('style').outerHTML;
+
+  // Create new style rules
+  const newStyles = `
+    :host {
+      width: 30px;
+      z-index: 998;
+      left: ${spawnRight === false ? (spawnX + 270) + "px" : spawnX + "px"};
+    }
+    #overlay-restore-button${overlayID} {
+      background-color: red;
+    }
+  `;
+
+  // Combine the original styles with the new styles
+  const combinedStyles = styleTag.replace('</style>', `${newStyles}</style>`);
+
+  overlay.dataset.initialHtml = shadowRoot.innerHTML;
+  shadowRoot.innerHTML = `
+    ${combinedStyles}
+    <button id="overlay-restore-button${overlayID}">+</button>
+  `;
+  shadowRoot.querySelector("#overlay-restore-button" + overlayID).addEventListener("click", () => restoreOverlay(overlayID, spawnRight, spawnX));
 }
 
-function restoreOverlay(overlayID) {
+function restoreOverlay(overlayID, spawnRight, spawnX) {
   const overlay = document.querySelector("#" + overlayID);
-  overlay.style.width = "300px";
-  overlay.style.height = "auto";
-  overlay.innerHTML = overlay.dataset.initialHtml;
-  attachEventListeners(overlayID);
+  const shadowRoot = overlay.shadowRoot;
+
+  // Extract the <style> tag from the original HTML
+  const styleTag = shadowRoot.querySelector('style');
+
+  // Create new style rules
+  const newStyles = `
+    :host {
+      width: 300px;
+      height: auto;
+      z-index: 999;
+      left: ${spawnX}px;
+    }
+  `;
+
+  // Combine the original styles with the new styles
+  const combinedStyles = styleTag.textContent + newStyles;
+
+  shadowRoot.innerHTML = overlay.dataset.initialHtml;
+  shadowRoot.querySelector('style').textContent = combinedStyles;
+
+  attachEventListeners(overlayID, spawnRight, spawnX);
 }
 
-function attachEventListeners(overlayID) {
+function attachEventListeners(overlayID, spawnRight, spawnX) {
   const overlay = document.querySelector("#" + overlayID);
+  const shadowRoot = overlay.shadowRoot;
 
-    document.querySelector("#playButton" + overlayID).addEventListener("click", () => {
-        const audioElement = document.querySelector("#pronunciation" + overlayID);
+    shadowRoot.querySelector("#playButton" + overlayID).addEventListener("click", () => {
+        const audioElement = shadowRoot.querySelector("#pronunciation" + overlayID);
         audioElement.play();
 });
 
-  document.querySelector("#overlay-minimize-button" + overlayID).addEventListener("click", () => minimizeOverlay(overlayID));
-  document.querySelector("#overlay-close-button" + overlayID).addEventListener("click", () => overlay.remove());
+  shadowRoot.querySelector("#overlay-minimize-button" + overlayID).addEventListener("click", () => minimizeOverlay(overlayID, spawnRight, spawnX));
+  shadowRoot.querySelector("#overlay-close-button" + overlayID).addEventListener("click", () => overlay.remove());
 
-  const toggleButton = document.getElementById("toggleButton" + overlayID);
+  const toggleButton = shadowRoot.getElementById("toggleButton" + overlayID);
   toggleButton.addEventListener("click", function() {
-      const translationElement = document.getElementById("translation" + overlayID);
-      const originalElement = document.getElementById("original" + overlayID);
+      const translationElement = shadowRoot.getElementById("translation" + overlayID);
+      const originalElement = shadowRoot.getElementById("original" + overlayID);
       
       const isTranslationVisible = translationElement.style.display !== "none";
       translationElement.style.display = isTranslationVisible ? "none" : "block";
@@ -290,10 +444,12 @@ function crop (image, area, done) {
   img.src = image
 }
 
-function isSelectionInsideElement(element) {
+// elements is of type NodeListOf<Element>
+function findParentOverlay(elements) {
   const selection = window.getSelection();
   if (selection.rangeCount === 0) return false;
 
-  const node = selection.anchorNode;
-  return element.contains(node);
+  const node = selection.anchorNode.parentElement;
+  const parent = Array.from(elements).find(element => element.shadowRoot.contains(node)) || null;
+  return parent;
 }

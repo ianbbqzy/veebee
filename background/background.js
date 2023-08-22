@@ -6,6 +6,14 @@ chrome.storage.sync.get((config) => {
     chrome.storage.sync.set({api: 'deepl'})
   }
 
+  if (!config.capture_mode) {
+    chrome.storage.sync.set({capture_mode: 'multiple'})
+  }
+
+  if (!config.pronunciation) {
+    chrome.storage.sync.set({pronunciation: 'off'})
+  }
+
   if (!config.source_lang) {
     chrome.storage.sync.set({source_lang: 'Japanese'})
   }
@@ -32,7 +40,14 @@ chrome.storage.sync.get((config) => {
 // for screenshot capture. 
 // It injects the content script into the active tab.
 chrome.action.onClicked.addListener((tab) => {
-  pingContentScript(tab, 'initCrop');
+  // continue with the translation process.
+  chrome.storage.sync.get((config) => {
+    if (config.capture_mode === 'screen') {
+      pingContentScript(tab, 'screenCapture');
+    } else {
+      pingContentScript(tab, 'initCrop');
+    }
+  })
 })
 
 // take-screenshot is received when keyboard shortcut is triggered, as defined in manifest.json
@@ -40,7 +55,13 @@ chrome.action.onClicked.addListener((tab) => {
 chrome.commands.onCommand.addListener((command) => {
   if (command === 'take-screenshot') {
     chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-      pingContentScript(tabs[0], 'initCrop');
+      chrome.storage.sync.get((config) => {
+        if (config.capture_mode === 'screen') {
+          pingContentScript(tabs[0], 'screenCapture');
+        } else {
+          pingContentScript(tabs[0], 'initCrop');
+        }
+      })
     })
   }
 })
@@ -95,13 +116,17 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       if (!config.idToken) {
         pingContentScript(tab, {"translation": "Please login first. Right click on the extension icon and click on options.", pronunciation: undefined});
       } else {
-        callTranslateWithText(info.selectionText, config.source_lang, config.target_lang, config.api, config.idToken)
+        callTranslateWithText(info.selectionText, config.source_lang, config.target_lang, config.api, config.idToken, config.pronunciation)
         .then(response => {
-          pingContentScript(tab, response)
+          if (response.error) {
+            pingContentScript(tab, {"error": `Translation: ${response.error}`, pronunciation: undefined});
+          } else {
+            pingContentScript(tab, response)
+          }
         })
         .catch(error => {
           console.error(`error: ${error.message}`);
-          pingContentScript(tab, {"translation": `Translation: ${error.message}`, pronunciation: undefined});
+          pingContentScript(tab, {"error": `Translation: ${error.message}`, pronunciation: undefined});
         });
       }
     })
@@ -109,14 +134,14 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 });
 
 // Modify the callTranslateWithText function
-async function callTranslateWithText(text, source_lang, target_lang, api, idToken) {
+async function callTranslateWithText(text, source_lang, target_lang, api, idToken, pronunciation) {
   const url = "__BACKEND_URL__";
   const headers = new Headers();
   headers.append('Authorization', `Bearer ${idToken}`);
   headers.append('Content-Type', `application/json`);
 
   try {
-    const resp = await fetch(url + '/translate-text?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang, {
+    const resp = await fetch(url + '/translate-text?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({
@@ -124,15 +149,14 @@ async function callTranslateWithText(text, source_lang, target_lang, api, idToke
       })
     }).then(res => res.json())
     if (resp.error) {
-      return {"translation": `Translation: ${resp.error}`, pronunciation: undefined};
-    }
-    if (resp.translation) {
+      return {"error": `Translation: ${resp.error}`};
+    } else if (resp.translation) {
       return {"translation": resp.translation, "pronunciation": resp.pronunciation};
     } else {
-      return {"translation": `Error: translation is not valid: ${resp}`, "pronunciation": resp.pronunciation};
+      return {"error": `Error: translation is not valid: ${resp}`};
     }
   } catch (err) {
-    return {"translation": `Translation: ${err.message}`, pronunciation: undefined};
+    return {"error": `Translation: ${err.message}`};
   }
 }
 
