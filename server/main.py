@@ -1,13 +1,10 @@
-import base64
 import concurrent.futures
-from io import BytesIO
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from functools import wraps
 from flask import request, jsonify
 import firebase_admin
 from firebase_admin import auth, credentials
-from PIL import Image
 from requests import exceptions
 from dotenv import load_dotenv
 from services.users_service import UsersService
@@ -16,7 +13,6 @@ from services.translation_service import TranslationService
 from services.audio_service import AudioService  # Add import for the new service
 import os
 from comic_text_detector.inference import model2annotations
-import re
 
 load_dotenv()
 hard_limit = 1000
@@ -140,6 +136,7 @@ def translate_img_all(user_id):
 
     model_path = r'comic_text_detector/data/comictextdetector.pt.onnx'
     
+    api = request.args.get('api')
     # Determine the function to call based on the api URL params
     if api == "gpt":
         translation_func = translation_serivce.call_gpt
@@ -149,14 +146,15 @@ def translate_img_all(user_id):
         return jsonify({"error": "Invalid API"}), 400
 
     try:
-        results = ocr_service.annotate_multiple_images(image_data_url, [coordinates['w'], coordinates['h']], model2annotations(model_path, image_data_url, save_json=False), source_lang)
+        ocr_results = ocr_service.annotate_multiple_images(image_data_url, [coordinates['w'], coordinates['h']], model2annotations(model_path, image_data_url, save_json=False), source_lang)
     except Exception as e:
         return jsonify({"error": str(e)}), 500  # Updated error response code
 
+    results = []
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = []
-        for ocr_result in results:
-            futures.append(executor.submit(process_ocr_result, ocr_result, source_lang, target_lang, user_id, translation_func))
+        for ocr_result in ocr_results:
+            futures.append(executor.submit(process_ocr_result, ocr_result, source_lang, target_lang, user_id, translation_func, api))
         for future in concurrent.futures.as_completed(futures):
             try:
                 result = future.result()
@@ -172,7 +170,7 @@ def get_user_limit(user_id):
     request_count, limit = users_service.get_request_count(user_id)
     return jsonify({"request_count": request_count, "limit": limit})
 
-def process_ocr_result(ocr_result, source_lang, target_lang, user_id, translation_func):
+def process_ocr_result(ocr_result, source_lang, target_lang, user_id, translation_func, api):
     try:
         translation = translation_func(ocr_result['original'], source_lang, target_lang)
     except ValueError as e:
