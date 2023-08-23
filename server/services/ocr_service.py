@@ -76,6 +76,22 @@ class OCRService:
                     raise e  # Raise the exception instead of just printing an error message
         return results
 
+    def process_box(self, box, image_dim, image_url, i, source_lang):
+        # Convert bounding box to pixel values
+        pixel_box = convert_box_to_pixel_values(box, image_dim)
+
+        # Construct new image URL (this depends on how your system expects URLs to be formed)
+        box_image_url = crop_image_data_url(image_url, pixel_box[0], pixel_box[1], pixel_box[2], pixel_box[3], img_dim=image_dim)
+
+        save_data_url_to_file(box_image_url, f'test{str(i)}.png')   
+        # Extract text from the cropped image using the bounding box
+        original_text = self.annotate_image(box_image_url, source_lang=source_lang)
+
+        return {
+            'original': original_text,
+            'bounding_box': [pixel_box[0], pixel_box[1], pixel_box[2]- pixel_box[0], pixel_box[3] - pixel_box[1]],
+        }
+
 def save_data_url_to_file(data_url, file_path):
     # Extract the base64 encoded part of the data URL
     base64_data = re.sub('^data:image/.+;base64,', '', data_url)
