@@ -92,6 +92,7 @@ const init = (done) => {
 };
 
 var capture = () => {
+  console.log("capturing in content")
   chrome.storage.sync.get((config) => {
     if (selection) {
       const coordinates = {...selection}
@@ -100,6 +101,8 @@ var capture = () => {
       jcropOverlay(false)
 
       chrome.runtime.sendMessage({message: 'capture'}, (res) => {
+        console.log("captured in background")
+
         if (!config.idToken) {
           if (config.capture_mode !== "single") {
             showTranslationDialog("Please login first. Right click on the extension icon and click on options.", 
@@ -122,7 +125,7 @@ var capture = () => {
                 y: document.documentElement.clientHeight / 2,
                 x2: document.documentElement.clientWidth / 2,
                 y2: document.documentElement.clientHeight / 2,
-              }, "", undefined)
+              }, "", undefined, "translatingOverlay")
               getTranslations(image, coordinates, config.api, config.idToken, config.source_lang, config.target_lang, config.pronunciation)
             }
           })
@@ -234,7 +237,6 @@ window.addEventListener('resize', ((timeout) => () => {
 })())
 
 function showTextTranslationDialog(translation, pronunciation, overlayId) {
-
   if (!overlayId) {
     const existingOverlay = document.querySelector('#overlayTranslatingText');
     if (existingOverlay) existingOverlay.remove();
@@ -280,7 +282,7 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
       ? coordinates.x2 + window.scrollX
       : coordinates.x - 300 + window.scrollX;
 
-  const existingOverlay = document.querySelector("#" + overlayID);
+  const existingOverlay = document.querySelector("#" + overlayID) || document.querySelector("#translatingOverlay");
   if (existingOverlay) existingOverlay.remove();
 
   const overlay = document.createElement('div');
@@ -306,6 +308,7 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
         flex-grow: 1;
         overflow: auto;
         top: 10px;
+        white-space: pre-line; /* Add this line to preserve line breaks */
       }
       /* Add other styles here */
     </style>

@@ -49,8 +49,8 @@ class OCRService:
 
         text = self.mocr(image)
         return text
-    
-    def annotate_multiple_images(self, image_url, image_dim, bounding_boxes, suource_lang):
+
+    def annotate_multiple_images(self, image_url, image_dim, bounding_boxes, source_lang):
         """
         Extract and translate text from bounding boxes.
         
@@ -61,6 +61,8 @@ class OCRService:
         """
         results = []
         
+        save_data_url_to_file(image_url, f'testFull.png')   
+
         if bounding_boxes is None:
             bounding_boxes = [[0, 0, 1, 1]]
 
@@ -113,7 +115,7 @@ def convert_box_to_pixel_values(box, image_dim):
     """
     center_x, center_y, width, height = box
     image_width, image_height = image_dim
-    print("coordinates",image_width, image_height)
+    print("image dimension", image_width, image_height)
 
     pixel_center_x = center_x * image_width
     pixel_center_y = center_y * image_height
