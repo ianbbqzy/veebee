@@ -1,4 +1,5 @@
 import base64
+import concurrent.futures
 from io import BytesIO
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -139,29 +140,31 @@ def translate_img_all(user_id):
 
     model_path = r'comic_text_detector/data/comictextdetector.pt.onnx'
     
-    results = ocr_service.annotate_multiple_images(image_data_url, [coordinates['w'], coordinates['h']], model2annotations(model_path, image_data_url, save_json=False), source_lang)
+    # Determine the function to call based on the api URL params
+    if api == "gpt":
+        translation_func = translation_serivce.call_gpt
+    elif api == "deepl":
+        translation_func = translation_serivce.call_deepl
+    else:
+        return jsonify({"error": "Invalid API"}), 400
 
-    for ocr_result in results:
-        api = request.args.get('api')
-        if api == "gpt":
+    try:
+        results = ocr_service.annotate_multiple_images(image_data_url, [coordinates['w'], coordinates['h']], model2annotations(model_path, image_data_url, save_json=False), source_lang)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500  # Updated error response code
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = []
+        for ocr_result in results:
+            futures.append(executor.submit(process_ocr_result, ocr_result, source_lang, target_lang, user_id, translation_func))
+        for future in concurrent.futures.as_completed(futures):
             try:
-                translation = translation_serivce.call_gpt(ocr_result['original'], source_lang, target_lang)
-            except ValueError as e:
-                return jsonify({"error": str(e)}), 400
-        elif api == "deepl":
-            try:
-                translation = translation_serivce.call_deepl(ocr_result['original'], source_lang, target_lang)
-            except ValueError as e:
-                return jsonify({"error": str(e)}), 400
-        else:
-            return jsonify({"error": "Invalid API"}), 400
-        users_service.store_request_data(user_id, ocr_result['original'], translation, "image", api)
-        pronunciation = audio_service.generate_pronunciation(ocr_result['original'], source_lang)
-        ocr_result['translation'] = translation
-        ocr_result['pronunciation'] = pronunciation
+                result = future.result()
+                results.append(result)
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500  # Updated error response code
 
     return jsonify({'translations': results, "coordinates": coordinates, "scroll_x": scroll_x, "scroll_y": scroll_y})  # Modified return
-
 
 @app.route("/get-user-limit", methods=["GET"])
 @authenticate
