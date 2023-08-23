@@ -172,5 +172,16 @@ def get_user_limit(user_id):
     request_count, limit = users_service.get_request_count(user_id)
     return jsonify({"request_count": request_count, "limit": limit})
 
+def process_ocr_result(ocr_result, source_lang, target_lang, user_id, translation_func):
+    try:
+        translation = translation_func(ocr_result['original'], source_lang, target_lang)
+    except ValueError as e:
+        raise e
+    users_service.store_request_data(user_id, ocr_result['original'], translation, "image", api)
+    pronunciation = audio_service.generate_pronunciation(ocr_result['original'], source_lang)
+    ocr_result['translation'] = translation
+    ocr_result['pronunciation'] = pronunciation
+    return ocr_result
+
 if __name__ == "__main__":
     app.run(port=3000)
