@@ -13,10 +13,15 @@
 <body>
     <div class="container">
         <h1>Manga Reader</h1>
-            <form>
-                <div class="social__login">
-                    <a href="#" class="btn btn__google"><i class="fa fa-google"></i>GOOGLE</a>
-                </div>
+        <form id="email_signin_form">
+            <input type="email" id="email_field" placeholder="Email">
+            <input type="password" id="password_field" placeholder="Password">
+            <button type="submit" class="btn btn__email">Sign In with Email</button>
+        </form>
+        <button id="email_signup_button" class="btn btn__email">Sign Up with Email</button>
+        <button id="forgot_password_button" class="btn btn__email">Forgot Password</button>
+        <div class="social__login">
+            <a href="#" class="btn btn__google"><i class="fa fa-google"></i>GOOGLE</a>
         </div>
     </div>
 </body>
