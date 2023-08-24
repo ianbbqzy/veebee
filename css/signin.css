@@ -88,3 +88,37 @@ h1 {
   color: #333;
   border: 1px solid #333;
 }
+
+/* New Code Changes */
+
+#email-signin-form,
+#email-signup-form {
+  margin-bottom: 20px;
+}
+
+#email-signin-form input,
+#email-signup-form input {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+
+#email-signin-form button,
+#email-signup-form button,
+#forgot-password {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  font-size: 16px;
+  background-color: #4285F4;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+#forgot-password {
+  margin-bottom: 20px;
+  background-color: #333;
+}
