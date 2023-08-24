@@ -11,6 +11,11 @@ const auth = getAuth(firebaseApp);
 
 onAuthStateChanged(auth, user => {
     if (user != null) {
+        if (!user.emailVerified) {
+            console.log('Email not verified!');
+            auth.signOut();
+            return;
+        }
         console.log('User is logged in!');
         chrome.storage.sync.set({idToken: user.accessToken})
         fetchUserLimit();
