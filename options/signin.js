@@ -5,7 +5,11 @@ import {
     signInWithCredential,
     GoogleAuthProvider,
     setPersistence,
-    browserLocalPersistence
+    browserLocalPersistence,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    sendPasswordResetEmail,
+    sendEmailVerification
 } from 'firebase/auth';
 
 // Auth instance for the current firebaseApp
@@ -28,6 +32,41 @@ init();
 
 document.querySelector('.btn__google').addEventListener('click', () => {
     initFirebaseApp()
+});
+
+document.querySelector('#email-signin-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const email = document.querySelector('#email-input').value;
+    const password = document.querySelector('#password-input').value;
+    signInWithEmailAndPassword(auth, email, password).catch((error) => {
+        console.error(error);
+        alert(error.message);
+    });
+});
+
+document.querySelector('#forgot-password').addEventListener('click', () => {
+    const email = document.querySelector('#email-input').value;
+    sendPasswordResetEmail(auth, email).catch((error) => {
+        console.error(error);
+        alert(error.message);
+    });
+});
+
+document.querySelector('#email-signup-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const email = document.querySelector('#signup-email-input').value;
+    const password = document.querySelector('#signup-password-input').value;
+    createUserWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+            sendEmailVerification(userCredential.user).catch((error) => {
+                console.error(error);
+                alert(error.message);
+            });
+        })
+        .catch((error) => {
+            console.error(error);
+            alert(error.message);
+        });
 });
 
 function initFirebaseApp() {
@@ -93,4 +132,3 @@ function startAuth(interactive) {
         }
     });
 }
-
