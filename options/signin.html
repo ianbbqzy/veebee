@@ -13,10 +13,19 @@
 <body>
     <div class="container">
         <h1>Manga Reader</h1>
-            <form>
-                <div class="social__login">
-                    <a href="#" class="btn btn__google"><i class="fa fa-google"></i>GOOGLE</a>
-                </div>
+        <form id="email-signin-form">
+            <input type="email" id="email-input" placeholder="Email">
+            <input type="password" id="password-input" placeholder="Password">
+            <button type="submit">Sign In</button>
+        </form>
+        <button id="forgot-password">Forgot Password</button>
+        <form id="email-signup-form">
+            <input type="email" id="signup-email-input" placeholder="Email">
+            <input type="password" id="signup-password-input" placeholder="Password">
+            <button type="submit">Sign Up</button>
+        </form>
+        <div class="social__login">
+            <a href="#" class="btn btn__google"><i class="fa fa-google"></i>GOOGLE</a>
         </div>
     </div>
 </body>
