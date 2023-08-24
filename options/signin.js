@@ -5,7 +5,10 @@ import {
     signInWithCredential,
     GoogleAuthProvider,
     setPersistence,
-    browserLocalPersistence
+    browserLocalPersistence,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    sendPasswordResetEmail
 } from 'firebase/auth';
 
 // Auth instance for the current firebaseApp
@@ -28,6 +31,30 @@ init();
 
 document.querySelector('.btn__google').addEventListener('click', () => {
     initFirebaseApp()
+});
+
+document.querySelector('#email_signin_form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const email = document.querySelector('#email_field').value;
+    const password = document.querySelector('#password_field').value;
+    signInWithEmailAndPassword(auth, email, password).catch((error) => {
+        console.error(error);
+    });
+});
+
+document.querySelector('#email_signup_button').addEventListener('click', () => {
+    const email = document.querySelector('#email_field').value;
+    const password = document.querySelector('#password_field').value;
+    createUserWithEmailAndPassword(auth, email, password).catch((error) => {
+        console.error(error);
+    });
+});
+
+document.querySelector('#forgot_password_button').addEventListener('click', () => {
+    const email = document.querySelector('#email_field').value;
+    sendPasswordResetEmail(auth, email).catch((error) => {
+        console.error(error);
+    });
 });
 
 function initFirebaseApp() {
@@ -93,4 +120,3 @@ function startAuth(interactive) {
         }
     });
 }
-
