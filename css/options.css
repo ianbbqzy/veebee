@@ -132,7 +132,6 @@ code { background: #ececec; padding: 5px 8px; border-radius: 3px; }
   letter-spacing: 0.2px;
   display: block;
   cursor: pointer;
-  max-width: 400px;
   height: 40px;
   padding: 5px;
   margin: 0 0 8px 0;
@@ -149,7 +148,6 @@ code { background: #ececec; padding: 5px 8px; border-radius: 3px; }
 }
 .s-label span {
   position: relative;
-  top: -15px;
 }
 
 .s-label em {

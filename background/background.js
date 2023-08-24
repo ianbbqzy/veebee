@@ -3,11 +3,11 @@
 // Set default config values
 chrome.storage.sync.get((config) => {
   if (!config.api) {
-    chrome.storage.sync.set({api: 'deepl'})
+    chrome.storage.sync.set({api: 'gpt'})
   }
 
   if (!config.capture_mode) {
-    chrome.storage.sync.set({capture_mode: 'multiple'})
+    chrome.storage.sync.set({capture_mode: 'single'})
   }
 
   if (!config.pronunciation) {
@@ -42,10 +42,15 @@ chrome.storage.sync.get((config) => {
 chrome.action.onClicked.addListener((tab) => {
   // continue with the translation process.
   chrome.storage.sync.get((config) => {
-    if (config.capture_mode === 'screen') {
-      pingContentScript(tab, 'screenCapture');
+    if (!config.idToken) {
+      // open options page if user is not logged in
+      chrome.runtime.openOptionsPage();
     } else {
-      pingContentScript(tab, 'initCrop');
+      if (config.capture_mode === 'screen') {
+        pingContentScript(tab, 'screenCapture');
+      } else {
+        pingContentScript(tab, 'initCrop');
+      }
     }
   })
 })

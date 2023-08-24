@@ -37,7 +37,7 @@ var state = {
   ],
   capture_mode: [
     {id: 'single', title: 'Capture a single text bubble'},
-    {id: 'multiple', title: 'Capture multiple text bubbles'},
+    {id: 'multiple', title: 'Capture multiple text bubbles (works best when capture an entire page)'},
     {id: 'screen', title: 'Capture the entire screen'}
   ],
   pronunciation: [
