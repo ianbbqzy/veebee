@@ -83,7 +83,7 @@ def translate_text(user_id):
     else:
         return jsonify({"error": "Invalid API"}), 400
     users_service.store_request_data(user_id, text, translation, "text", api)
-    pronunciation = audio_service.generate_pronunciation(text, source_lang)  # New code
+    pronunciation = audio_service.generate_pronunciation(text, source_lang) if request.args.get('pronunciation') == 'on' else None
     return jsonify({"translation": translation, "pronunciation": pronunciation})  # Modified return
 
 @app.route("/translate-img", methods=["POST"])
@@ -117,7 +117,7 @@ def translate_img(user_id):
     else:
         return jsonify({"error": "Invalid API"}), 400
     users_service.store_request_data(user_id, text, translation, "image", api)
-    pronunciation = audio_service.generate_pronunciation(text, source_lang)
+    pronunciation = audio_service.generate_pronunciation(text, source_lang) if request.args.get('pronunciation') == 'on' else None
     return jsonify({"translation": translation, "original": text, "pronunciation": pronunciation})  # Modified return
 
 @app.route("/translate-img-all", methods=["POST"])
@@ -150,11 +150,13 @@ def translate_img_all(user_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500  # Updated error response code
 
+    pronunciation = request.args.get('pronunciation')
+
     results = []
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = []
         for ocr_result in ocr_results:
-            futures.append(executor.submit(process_ocr_result, ocr_result, source_lang, target_lang, user_id, translation_func, api))
+            futures.append(executor.submit(process_ocr_result, ocr_result, source_lang, target_lang, user_id, translation_func, api, pronunciation))
         for future in concurrent.futures.as_completed(futures):
             try:
                 result = future.result()
@@ -170,13 +172,13 @@ def get_user_limit(user_id):
     request_count, limit = users_service.get_request_count(user_id)
     return jsonify({"request_count": request_count, "limit": limit})
 
-def process_ocr_result(ocr_result, source_lang, target_lang, user_id, translation_func, api):
+def process_ocr_result(ocr_result, source_lang, target_lang, user_id, translation_func, api, pronunciation):
     try:
         translation = translation_func(ocr_result['original'], source_lang, target_lang)
     except ValueError as e:
         raise e
     users_service.store_request_data(user_id, ocr_result['original'], translation, "image", api)
-    pronunciation = audio_service.generate_pronunciation(ocr_result['original'], source_lang)
+    pronunciation = audio_service.generate_pronunciation(ocr_result['original'], source_lang) if pronunciation == 'on' else None
     ocr_result['translation'] = translation
     ocr_result['pronunciation'] = pronunciation
     return ocr_result
