@@ -330,6 +330,14 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
   if (minimize) {
     minimizeOverlay(overlayID, spawnRight, spawnX)
   }
+
+  // Overlay content
+  const playButton = overlay.shadowRoot.querySelector(`#playButton${overlayID}`);
+  if (pronunciation) {
+    playButton.disabled = false;
+  } else {
+    playButton.disabled = true;
+  }
 }
 
 function minimizeOverlay(overlayID, spawnRight, spawnX) {
