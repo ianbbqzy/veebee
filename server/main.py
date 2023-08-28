@@ -83,7 +83,7 @@ def translate_text(user_id):
     else:
         return jsonify({"error": "Invalid API"}), 400
     users_service.store_request_data(user_id, text, translation, "text", api)
-    pronunciation = audio_service.generate_pronunciation(text, source_lang) if request.args.get('pronunciation') == 'on' else None
+    pronunciation = audio_service.generate_pronunciation(text, source_lang) if request.args.get('pronunciation') == 'true' else None
     return jsonify({"translation": translation, "pronunciation": pronunciation})  # Modified return
 
 @app.route("/translate-img", methods=["POST"])
@@ -117,7 +117,7 @@ def translate_img(user_id):
     else:
         return jsonify({"error": "Invalid API"}), 400
     users_service.store_request_data(user_id, text, translation, "image", api)
-    pronunciation = audio_service.generate_pronunciation(text, source_lang) if request.args.get('pronunciation') == 'on' else None
+    pronunciation = audio_service.generate_pronunciation(text, source_lang) if request.args.get('pronunciation') == 'true' else None
     return jsonify({"translation": translation, "original": text, "pronunciation": pronunciation})  # Modified return
 
 @app.route("/translate-img-all", methods=["POST"])
@@ -178,7 +178,7 @@ def process_ocr_result(ocr_result, source_lang, target_lang, user_id, translatio
     except ValueError as e:
         raise e
     users_service.store_request_data(user_id, ocr_result['original'], translation, "image", api)
-    pronunciation = audio_service.generate_pronunciation(ocr_result['original'], source_lang) if pronunciation == 'on' else None
+    pronunciation = audio_service.generate_pronunciation(ocr_result['original'], source_lang) if pronunciation == 'true' else None
     ocr_result['translation'] = translation
     ocr_result['pronunciation'] = pronunciation
     return ocr_result
