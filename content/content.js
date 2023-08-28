@@ -118,7 +118,7 @@ var capture = () => {
         } else {            
           crop(res.image, coordinates, (image) => {
             if (config.capture_mode === "single") {
-              getTranslation(image, coordinates, config.api, config.idToken, config.source_lang, config.target_lang, config.pronunciation)
+              getTranslation(image, coordinates, "deepl", config.idToken, config.source_lang, config.target_lang, config.pronunciation)
             } else {
               showTranslationDialog("translating", {
                 x: document.documentElement.clientWidth / 2,
@@ -126,7 +126,7 @@ var capture = () => {
                 x2: document.documentElement.clientWidth / 2,
                 y2: document.documentElement.clientHeight / 2,
               }, "", undefined, "translatingOverlay")
-              getTranslations(image, coordinates, config.api, config.idToken, config.source_lang, config.target_lang, config.pronunciation)
+              getTranslations(image, coordinates, "deepl", config.idToken, config.source_lang, config.target_lang, config.pronunciation)
             }
           })
         }
@@ -176,7 +176,20 @@ var getTranslations = async (image, coordinates, api, idToken, source_lang, targ
           x2: translation['bounding_box'][0] + translation['bounding_box'][2] + coordinates.x,
           y2: translation['bounding_box'][1] + translation['bounding_box'][3] + coordinates.y,
         };
-        showTranslationDialog(translation.translation, ith_coordinates, translation.original, translation.pronunciation, "overlay" + i, true);
+        showTranslationDialog(translation.translation + "\n\n retrieving in-depth translation", ith_coordinates, translation.original, translation.pronunciation, "overlay" + i, true);
+        callTranslateWithText(translation.original, "gpt", idToken, source_lang, target_lang, pronunciation)
+        .then(response => {
+          if (response.error) {
+            showTranslationDialog(`Error: translation is not valid: ${response.error}`, ith_coordinates, "", undefined, "overlay" + i)
+          } else if (response.translation) {
+            showTranslationDialog(response.translation, ith_coordinates, response.original, response.pronunciation, "overlay" + i)
+          } else {
+            showTranslationDialog(`Error: translation is not valid: ${response}`, ith_coordinates, "", undefined, "overlay" + i)
+          }
+        })
+        .catch(error => {
+          showTranslationDialog(`Error: ${error.message}`, ith_coordinates, "", undefined, "overlay" + i)
+        });
       }
     } else {
       showTranslationDialog(`Error: translation is not valid: ${response}`, coordinates, "", undefined)
@@ -221,7 +234,20 @@ var getTranslation = async (image, coordinates, api, idToken, source_lang, targe
     if (response.error) {
       showTranslationDialog(`Error: translation is not valid: ${response.error}`, coordinates, "", undefined, overlayId)
     } else if (response.translation) {
-      showTranslationDialog(response.translation, coordinates, response.original, response.pronunciation, overlayId)
+      showTranslationDialog(response.translation + "\n\n retrieving in-depth translation", coordinates, response.original, response.pronunciation, overlayId)
+      callTranslateWithText(response.original, "gpt", idToken, source_lang, target_lang, pronunciation)
+      .then(response => {
+        if (response.error) {
+          showTranslationDialog(`Error: translation is not valid: ${response.error}`, coordinates, "", undefined, overlayId)
+        } else if (response.translation) {
+          showTranslationDialog(response.translation, coordinates, response.original, response.pronunciation, overlayId)
+        } else {
+          showTranslationDialog(`Error: translation is not valid: ${response}`, coordinates, "", undefined, overlayId)
+        }
+      })
+      .catch(error => {
+        showTranslationDialog(`Error: ${error.message}`, coordinates, "", undefined, overlayId)
+      });
     } else {
       showTranslationDialog(`Error: translation is not valid: ${response}`, coordinates, "", undefined, overlayId)
     }
