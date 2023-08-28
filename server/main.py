@@ -57,9 +57,9 @@ ocr_service = OCRService()
 translation_serivce = TranslationService(os.getenv("OPENAI_API_KEY"), os.getenv("DEEPL_API_KEY"))
 audio_service = AudioService()  # Initialize the new service
 
-@app.route("/translate-text", methods=["POST"])
+@app.route("/translate-text-stream", methods=["POST"])
 @authenticate
-def translate_text(user_id):
+def translate_text_stream(user_id):
     source_lang = request.args.get('source_lang')
     target_lang = request.args.get('target_lang', 'English')  # Added target_lang argument
     request_count, limit = users_service.get_request_count(user_id)
@@ -84,7 +84,7 @@ def translate_text(user_id):
         return jsonify({"error": "Invalid API"}), 400
     users_service.store_request_data(user_id, text, translation, "text", api)
     pronunciation = audio_service.generate_pronunciation(text, source_lang) if request.args.get('pronunciation') == 'true' else None
-    return jsonify({"translation": translation, "pronunciation": pronunciation})  # Modified return
+    return Response(stream_with_context(translation), mimetype='text/event-stream')
 
 @app.route("/translate-img", methods=["POST"])
 @authenticate
