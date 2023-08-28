@@ -234,7 +234,9 @@ var getTranslation = async (image, coordinates, api, idToken, source_lang, targe
     if (response.error) {
       showTranslationDialog(`Error: translation is not valid: ${response.error}`, coordinates, "", undefined, overlayId)
     } else if (response.translation) {
-      showTranslationDialog(response.translation + "\n\n retrieving in-depth translation", coordinates, response.original, response.pronunciation, overlayId)
+      if (api === "gpt") {
+        showTranslationDialog(response.translation + "\n\n retrieving in-depth translation", coordinates, response.original, response.pronunciation, overlayId);
+      }
       callTranslateWithText(response.original, "gpt", idToken, source_lang, target_lang, pronunciation)
       .then(response => {
         if (response.error) {
