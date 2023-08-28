@@ -176,7 +176,7 @@ var getTranslations = async (image, coordinates, api, idToken, source_lang, targ
           x2: translation['bounding_box'][0] + translation['bounding_box'][2] + coordinates.x,
           y2: translation['bounding_box'][1] + translation['bounding_box'][3] + coordinates.y,
         };
-        showTranslationDialog(translation.translation, ith_coordinates, translation.original, undefined, "overlay" + i, true);
+        showTranslationDialog(translation.translation, ith_coordinates, translation.original, translation.pronunciation, "overlay" + i, true);
       }
     } else {
       showTranslationDialog(`Error: translation is not valid: ${response}`, coordinates, "", undefined)
@@ -326,13 +326,13 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
   
   // Append the overlay to the document body
   document.body.appendChild(overlay);
-  attachEventListeners(overlayID, spawnRight, spawnX);
+  attachEventListeners(overlayID, spawnRight, spawnX, pronunciation);
   if (minimize) {
-    minimizeOverlay(overlayID, spawnRight, spawnX)
+    minimizeOverlay(overlayID, spawnRight, spawnX, pronunciation)
   }
 }
 
-function minimizeOverlay(overlayID, spawnRight, spawnX) {
+function minimizeOverlay(overlayID, spawnRight, spawnX, pronunciation) {
   const overlay = document.querySelector("#" + overlayID);
   const shadowRoot = overlay.shadowRoot;
 
@@ -359,10 +359,10 @@ function minimizeOverlay(overlayID, spawnRight, spawnX) {
     ${combinedStyles}
     <button id="overlay-restore-button${overlayID}">+</button>
   `;
-  shadowRoot.querySelector("#overlay-restore-button" + overlayID).addEventListener("click", () => restoreOverlay(overlayID, spawnRight, spawnX));
+  shadowRoot.querySelector("#overlay-restore-button" + overlayID).addEventListener("click", () => restoreOverlay(overlayID, spawnRight, spawnX, pronunciation));
 }
 
-function restoreOverlay(overlayID, spawnRight, spawnX) {
+function restoreOverlay(overlayID, spawnRight, spawnX, pronunciation) {
   const overlay = document.querySelector("#" + overlayID);
   const shadowRoot = overlay.shadowRoot;
 
@@ -385,19 +385,25 @@ function restoreOverlay(overlayID, spawnRight, spawnX) {
   shadowRoot.innerHTML = overlay.dataset.initialHtml;
   shadowRoot.querySelector('style').textContent = combinedStyles;
 
-  attachEventListeners(overlayID, spawnRight, spawnX);
+  attachEventListeners(overlayID, spawnRight, spawnX, pronunciation);
 }
 
-function attachEventListeners(overlayID, spawnRight, spawnX) {
+function attachEventListeners(overlayID, spawnRight, spawnX, pronunciation) {
   const overlay = document.querySelector("#" + overlayID);
   const shadowRoot = overlay.shadowRoot;
 
-    shadowRoot.querySelector("#playButton" + overlayID).addEventListener("click", () => {
-        const audioElement = shadowRoot.querySelector("#pronunciation" + overlayID);
-        audioElement.play();
-});
+  const playButton = shadowRoot.querySelector("#playButton" + overlayID)
+  playButton.addEventListener("click", () => {
+      const audioElement = shadowRoot.querySelector("#pronunciation" + overlayID);
+      audioElement.play();
+  });
+  if (pronunciation) {
+    playButton.disabled = false;
+  } else {
+    playButton.disabled = true;
+  }
 
-  shadowRoot.querySelector("#overlay-minimize-button" + overlayID).addEventListener("click", () => minimizeOverlay(overlayID, spawnRight, spawnX));
+  shadowRoot.querySelector("#overlay-minimize-button" + overlayID).addEventListener("click", () => minimizeOverlay(overlayID, spawnRight, spawnX, pronunciation));
   shadowRoot.querySelector("#overlay-close-button" + overlayID).addEventListener("click", () => overlay.remove());
 
   const toggleButton = shadowRoot.getElementById("toggleButton" + overlayID);
