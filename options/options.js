@@ -36,8 +36,8 @@ var state = {
     {id: 'deepl', title: 'DeepL (For quick translation)'}
   ],
   capture_mode: [
-    {id: 'single', title: 'Capture a single text bubble'},
-    {id: 'multiple', title: 'Capture multiple text bubbles'},
+    {id: 'single', title: 'Capture a single text bubble (for stability)'},
+    {id: 'multiple', title: 'Capture multiple text bubbles (for convenience)'},
     {id: 'screen', title: 'Capture the entire screen'}
   ],
   pronunciation: [
