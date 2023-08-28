@@ -59,7 +59,12 @@ var state = {
   userLimit: {
     requestCount: 0,
     limit: 0
-  }
+  },
+  // Add a new option for streaming
+  streaming: [
+    {id: 'on', title: 'On'},
+    {id: 'off', title: 'Off'}
+  ]
 }
 
 // Set the state of the options page based on the current config
@@ -70,6 +75,8 @@ chrome.storage.sync.get((config) => {
   state.source_lang.forEach((item) => item.checked = item.id === config.source_lang)
   state.target_lang.forEach((item) => item.checked = item.id === config.target_lang)
   state.icon.forEach((item) => item.checked = item.id === config.icon)
+  // Set the state for the streaming option
+  state.streaming.forEach((item) => item.checked = item.id === config.streaming)
   fetchUserLimit();
 
   m.redraw()
@@ -107,6 +114,13 @@ var events = {
       shortcut: 'chrome://extensions/shortcuts',
       location: 'chrome://settings/downloads',
     }[action]})
+  },
+  // Add event handler for the streaming option
+  streaming: (item) => () => {
+    state.streaming.forEach((item) => item.checked = false)
+    item.checked = true
+
+    chrome.storage.sync.set({streaming: item.id})
   }
 }
 
