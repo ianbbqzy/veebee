@@ -533,3 +533,35 @@ async function callTranslateWithText(text, source_lang, target_lang, api, idToke
     return {"error": `Translation: ${err.message}`};
   }
 }
+
+async function callTranslateWithTextStream(text, source_lang, target_lang, api, idToken, pronunciation) {
+  const url = process.env.BACKEND_URL;
+  const headers = new Headers();
+  headers.append('Authorization', `Bearer ${idToken}`);
+  headers.append('Content-Type', `application/json`);
+
+  try {
+    const resp = await fetch(url + '/translate-text-stream?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({
+        'text': text
+      })
+    })
+
+    const reader = resp.body.getReader();
+    let chunks = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      chunks += new TextDecoder("utf-8").decode(value);
+      // Here you can process the chunk of translation
+      // For example, you can update the translation dialog with the new chunk
+      updateTranslationDialog(chunks);
+    }
+  } catch (err) {
+    return {"error": `Translation: ${err.message}`};
+  }
+}
