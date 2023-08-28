@@ -180,20 +180,22 @@ var getTranslations = async (image, coordinates, api, idToken, source_lang, targ
           showTranslationDialog(translation.translation + "\n\n retrieving in-depth translation", ith_coordinates, translation.original, translation.pronunciation, "overlay" + i, true);
         } else {
           showTranslationDialog(translation.translation + "\n\n retrieving in-depth translation", ith_coordinates, translation.original, translation.pronunciation, "overlay" + i);
+        if (api === "gpt") {
+          showTranslationDialog(translation.translation + "\n\n retrieving in-depth translation", ith_coordinates, translation.original, translation.pronunciation, "overlay" + i, true);
+          callTranslateWithText(translation.original, "gpt", idToken, source_lang, target_lang, pronunciation)
+          .then(response => {
+            if (response.error) {
+              showTranslationDialog(`Error: translation is not valid: ${response.error}`, ith_coordinates, "", undefined, "overlay" + i)
+            } else if (response.translation) {
+              showTranslationDialog(response.translation, ith_coordinates, response.original, response.pronunciation, "overlay" + i)
+            } else {
+              showTranslationDialog(`Error: translation is not valid: ${response}`, ith_coordinates, "", undefined, "overlay" + i)
+            }
+          })
+          .catch(error => {
+            showTranslationDialog(`Error: ${error.message}`, ith_coordinates, "", undefined, "overlay" + i)
+          });
         }
-        callTranslateWithText(translation.original, "gpt", idToken, source_lang, target_lang, pronunciation)
-        .then(response => {
-          if (response.error) {
-            showTranslationDialog(`Error: translation is not valid: ${response.error}`, ith_coordinates, "", undefined, "overlay" + i)
-          } else if (response.translation) {
-            showTranslationDialog(response.translation, ith_coordinates, response.original, response.pronunciation, "overlay" + i)
-          } else {
-            showTranslationDialog(`Error: translation is not valid: ${response}`, ith_coordinates, "", undefined, "overlay" + i)
-          }
-        })
-        .catch(error => {
-          showTranslationDialog(`Error: ${error.message}`, ith_coordinates, "", undefined, "overlay" + i)
-        });
       }
     } else {
       showTranslationDialog(`Error: translation is not valid: ${response}`, coordinates, "", undefined)
