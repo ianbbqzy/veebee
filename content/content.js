@@ -176,7 +176,11 @@ var getTranslations = async (image, coordinates, api, idToken, source_lang, targ
           x2: translation['bounding_box'][0] + translation['bounding_box'][2] + coordinates.x,
           y2: translation['bounding_box'][1] + translation['bounding_box'][3] + coordinates.y,
         };
-        showTranslationDialog(translation.translation + "\n\n retrieving in-depth translation", ith_coordinates, translation.original, translation.pronunciation, "overlay" + i, true);
+        if (api === "gpt") {
+          showTranslationDialog(translation.translation + "\n\n retrieving in-depth translation", ith_coordinates, translation.original, translation.pronunciation, "overlay" + i, true);
+        } else {
+          showTranslationDialog(translation.translation + "\n\n retrieving in-depth translation", ith_coordinates, translation.original, translation.pronunciation, "overlay" + i);
+        }
         callTranslateWithText(translation.original, "gpt", idToken, source_lang, target_lang, pronunciation)
         .then(response => {
           if (response.error) {
@@ -234,9 +238,7 @@ var getTranslation = async (image, coordinates, api, idToken, source_lang, targe
     if (response.error) {
       showTranslationDialog(`Error: translation is not valid: ${response.error}`, coordinates, "", undefined, overlayId)
     } else if (response.translation) {
-      if (api === "gpt") {
-        showTranslationDialog(response.translation + "\n\n retrieving in-depth translation", coordinates, response.original, response.pronunciation, overlayId);
-      }
+      showTranslationDialog(response.translation + "\n\n retrieving in-depth translation", coordinates, response.original, response.pronunciation, overlayId)
       callTranslateWithText(response.original, "gpt", idToken, source_lang, target_lang, pronunciation)
       .then(response => {
         if (response.error) {
