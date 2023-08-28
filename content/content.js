@@ -163,23 +163,45 @@ async function callTranslateAllWithScreenshot(image, source_lang, target_lang, a
 }
 
 var getTranslations = async (image, coordinates, api, idToken, source_lang, target_lang, pronunciation) => {
-  callTranslateAllWithScreenshot(image, source_lang, target_lang, api, idToken, coordinates, pronunciation)
+  const overlayId = "overlay" + Math.floor(Math.random() * 10000 + 2000);
+
+  callTranslateAllWithScreenshot(image, source_lang, target_lang, "deepl", idToken, coordinates, pronunciation)
   .then(response => {
     if (response.error) {
-      showTranslationDialog(`Error: translation is not valid: ${response.error}`, coordinates, "", undefined)
+      showTranslationDialog(`Error: translation response has an error: ${response.error}`, coordinates, "", undefined, overlayId)
     } else if (response.translations) {
       for (var i = 0; i < response.translations.length; i++) {
-        var translation = response.translations[i];
-        const ith_coordinates = {
-          x: translation['bounding_box'][0] + coordinates.x,
-          y: translation['bounding_box'][1] + coordinates.y,
-          x2: translation['bounding_box'][0] + translation['bounding_box'][2] + coordinates.x,
-          y2: translation['bounding_box'][1] + translation['bounding_box'][3] + coordinates.y,
-        };
-        showTranslationDialog(translation.translation, ith_coordinates, translation.original, translation.pronunciation, "overlay" + i, true);
+        // wrap in function so that overlayID is preserved for each iteration inside the async then call.
+        (function(index, individualOverlayId) {
+          var translation = response.translations[index];
+          const ith_coordinates = {
+            x: translation['bounding_box'][0] + coordinates.x,
+            y: translation['bounding_box'][1] + coordinates.y,
+            x2: translation['bounding_box'][0] + translation['bounding_box'][2] + coordinates.x,
+            y2: translation['bounding_box'][1] + translation['bounding_box'][3] + coordinates.y,
+          };
+          if (api === "gpt") {
+            showTranslationDialog(translation.translation + "\n\n retrieving in-depth translation", ith_coordinates, translation.original, translation.pronunciation, individualOverlayId, true)
+            callTranslateWithText(translation.original, source_lang, target_lang, "gpt", idToken, false)
+            .then(secondResponse => {
+              if (secondResponse.error) {
+                showTranslationDialog(translation.translation + `\n\n Failed to retrieve in-depth translation: ${secondResponse.error}`, ith_coordinates, translation.original, translation.pronunciation, individualOverlayId)
+              } else if (secondResponse.translation) {
+                showTranslationDialog(secondResponse.translation, ith_coordinates, translation.original, translation.pronunciation, individualOverlayId)
+              } else {
+                showTranslationDialog(translation.translation + "\n\n Failed to retrieve in-depth translation: translation is not found in the response", ith_coordinates, translation.original, translation.pronunciation, individualOverlayId)
+              }
+            })
+            .catch(error => {
+              showTranslationDialog(translation.translation  + `\n\n Failed to retrieve in-depth translation: ${error}`, ith_coordinates, translation.original, translation.pronunciation, individualOverlayId)
+            });
+          } else {
+            showTranslationDialog(translation.translation, ith_coordinates, translation.original, translation.pronunciation, individualOverlayId, true);
+          }
+        })(i, overlayId + i);
       }
     } else {
-      showTranslationDialog(`Error: translation is not valid: ${response}`, coordinates, "", undefined)
+      showTranslationDialog(`Error: Failed to get response: ${response}`, coordinates, "", undefined, overlayId)
     }
   })
   .catch(error => {
@@ -216,12 +238,30 @@ var getTranslation = async (image, coordinates, api, idToken, source_lang, targe
   const overlayId = "overlay" + Math.floor(Math.random() * 10000 + 1000);
   
   showTranslationDialog("translating", coordinates, "", undefined, overlayId)
-  callTranslateWithScreenshot(image, source_lang, target_lang, api, idToken, pronunciation)
+  callTranslateWithScreenshot(image, source_lang, target_lang, "deepl", idToken, pronunciation)
   .then(response => {
     if (response.error) {
       showTranslationDialog(`Error: translation is not valid: ${response.error}`, coordinates, "", undefined, overlayId)
     } else if (response.translation) {
-      showTranslationDialog(response.translation, coordinates, response.original, response.pronunciation, overlayId)
+      if (api === "gpt") {
+        showTranslationDialog(response.translation + "\n\n retrieving in-depth translation", coordinates, response.original, response.pronunciation, overlayId)
+        callTranslateWithText(response.original, source_lang, target_lang, "gpt", idToken,  false)
+        .then(secondResponse => {
+          if (secondResponse.error) {
+            showTranslationDialog(response.translation + `\n\n Failed to retrieve in-depth translation: ${secondResponse.error}`, coordinates, response.original, response.pronunciation, overlayId)
+          } else if (secondResponse.translation) {
+            showTranslationDialog(secondResponse.translation, coordinates, response.original, response.pronunciation, overlayId)
+          } else {
+            showTranslationDialog(response.translation + "\n\n Failed to retrieve in-depth translation: translation not found in the response", coordinates, response.original, response.pronunciation, overlayId)
+          }
+        })
+        .catch(error => {
+          showTranslationDialog(response.translation+ `\n\n Failed to retrieve in-depth translation: ${error}`, coordinates, response.original, response.pronunciation, overlayId)
+        });
+      } else {
+        showTranslationDialog(response.translation, coordinates, response.original, response.pronunciation, overlayId)
+      }
+      
     } else {
       showTranslationDialog(`Error: translation is not valid: ${response}`, coordinates, "", undefined, overlayId)
     }
@@ -282,7 +322,11 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
       ? coordinates.x2 + window.scrollX
       : coordinates.x - 300 + window.scrollX;
 
-  const existingOverlay = document.querySelector("#" + overlayID) || document.querySelector("#translatingOverlay");
+  let existingOverlay = document.querySelector("#" + overlayID)
+  console.log("overlayID: " + overlayID)
+  const existingIsMinimized = existingOverlay && existingOverlay.shadowRoot.querySelector(`#translation${overlayID}`) === null;
+  minimize = existingOverlay ? existingIsMinimized : minimize;
+  existingOverlay = existingOverlay || document.querySelector("#translatingOverlay");
   if (existingOverlay) existingOverlay.remove();
 
   const overlay = document.createElement('div');
@@ -461,4 +505,31 @@ function findParentOverlay(elements) {
   const node = selection.anchorNode.parentElement;
   const parent = Array.from(elements).find(element => element.shadowRoot.contains(node)) || null;
   return parent;
+}
+
+// Modify the callTranslateWithText function
+async function callTranslateWithText(text, source_lang, target_lang, api, idToken, pronunciation) {
+  const url = process.env.BACKEND_URL;
+  const headers = new Headers();
+  headers.append('Authorization', `Bearer ${idToken}`);
+  headers.append('Content-Type', `application/json`);
+
+  try {
+    const resp = await fetch(url + '/translate-text?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({
+        'text': text
+      })
+    }).then(res => res.json())
+    if (resp.error) {
+      return {"error": `Translation: ${resp.error}`};
+    } else if (resp.translation) {
+      return {"translation": resp.translation, "pronunciation": resp.pronunciation};
+    } else {
+      return {"error": `Error: translation is not valid: ${resp}`};
+    }
+  } catch (err) {
+    return {"error": `Translation: ${err.message}`};
+  }
 }
