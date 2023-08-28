@@ -165,41 +165,35 @@ async function callTranslateAllWithScreenshot(image, source_lang, target_lang, a
 var getTranslations = async (image, coordinates, api, idToken, source_lang, target_lang, pronunciation) => {
   callTranslateAllWithScreenshot(image, source_lang, target_lang, api, idToken, coordinates, pronunciation)
   .then(response => {
-    if (response.error) {
-      showTranslationDialog(`Error: translation is not valid: ${response.error}`, coordinates, "", undefined)
-    } else if (response.translations) {
-      for (var i = 0; i < response.translations.length; i++) {
-        var translation = response.translations[i];
-        const ith_coordinates = {
-          x: translation['bounding_box'][0] + coordinates.x,
-          y: translation['bounding_box'][1] + coordinates.y,
-          x2: translation['bounding_box'][0] + translation['bounding_box'][2] + coordinates.x,
-          y2: translation['bounding_box'][1] + translation['bounding_box'][3] + coordinates.y,
-        };
-        if (api === "gpt") {
-          showTranslationDialog(translation.translation + "\n\n retrieving in-depth translation", ith_coordinates, translation.original, translation.pronunciation, "overlay" + i, true);
+        if (response.error) {
+          showTranslationDialog(`Error: translation is not valid: ${response.error}`, coordinates, "", undefined)
+        } else if (response.translations) {
+          for (var i = 0; i < response.translations.length; i++) {
+            var translation = response.translations[i];
+            const ith_coordinates = {
+              x: translation['bounding_box'][0] + coordinates.x,
+              y: translation['bounding_box'][1] + coordinates.y,
+              x2: translation['bounding_box'][0] + translation['bounding_box'][2] + coordinates.x,
+              y2: translation['bounding_box'][1] + translation['bounding_box'][3] + coordinates.y,
+            };
+            showTranslationDialog(translation.translation + "\n\n retrieving in-depth translation", ith_coordinates, translation.original, translation.pronunciation, "overlay" + i, true);
+            callTranslateWithText(translation.original, "gpt", idToken, source_lang, target_lang, pronunciation)
+            .then(response => {
+              if (response.error) {
+                showTranslationDialog(`Error: translation is not valid: ${response.error}`, ith_coordinates, "", undefined, "overlay" + i)
+              } else if (response.translation) {
+                showTranslationDialog(response.translation, ith_coordinates, response.original, response.pronunciation, "overlay" + i)
+              } else {
+                showTranslationDialog(`Error: translation is not valid: ${response}`, ith_coordinates, "", undefined, "overlay" + i)
+              }
+            })
+            .catch(error => {
+              showTranslationDialog(`Error: ${error.message}`, ith_coordinates, "", undefined, "overlay" + i)
+            });
+          }
         } else {
-          showTranslationDialog(translation.translation + (response.error ? "\n\n + in-depth translation failed" : "") + "\n\n retrieving in-depth translation", ith_coordinates, translation.original, translation.pronunciation, "overlay" + i);
-        if (api === "gpt") {
-          showTranslationDialog(translation.translation + "\n\n retrieving in-depth translation", ith_coordinates, translation.original, translation.pronunciation, "overlay" + i, true);
-          callTranslateWithText(translation.original, "gpt", idToken, source_lang, target_lang, pronunciation)
-          .then(response => {
-            if (response.error) {
-              showTranslationDialog(`Error: translation is not valid: ${response.error}`, ith_coordinates, "", undefined, "overlay" + i)
-            } else if (response.translation) {
-              showTranslationDialog(response.translation, ith_coordinates, response.original, response.pronunciation, "overlay" + i)
-            } else {
-              showTranslationDialog(`Error: translation is not valid: ${response}`, ith_coordinates, "", undefined, "overlay" + i)
-            }
-          })
-          .catch(error => {
-            showTranslationDialog(`Error: ${error.message}`, ith_coordinates, "", undefined, "overlay" + i)
-          });
+          showTranslationDialog(`Error: translation is not valid: ${response}\n\n + in-depth translation failed`, coordinates, "", undefined)
         }
-      }
-    } else {
-      showTranslationDialog(`Error: translation is not valid: ${response}`, coordinates, "", undefined)
-    }
   })
   .catch(error => {
     console.error(`Error: ${error.message}`);
@@ -237,26 +231,28 @@ var getTranslation = async (image, coordinates, api, idToken, source_lang, targe
   showTranslationDialog("translating", coordinates, "", undefined, overlayId)
   callTranslateWithScreenshot(image, source_lang, target_lang, api, idToken, pronunciation)
   .then(response => {
-    if (response.error) {
-      showTranslationDialog(`Error: translation is not valid: ${response.error}`, coordinates, "", undefined, overlayId)
-    } else if (response.translation) {
-      showTranslationDialog(response.translation + "\n\n retrieving in-depth translation", coordinates, response.original, response.pronunciation, overlayId)
-      callTranslateWithText(response.original, "gpt", idToken, source_lang, target_lang, pronunciation)
-      .then(response => {
         if (response.error) {
           showTranslationDialog(`Error: translation is not valid: ${response.error}`, coordinates, "", undefined, overlayId)
         } else if (response.translation) {
-          showTranslationDialog(response.translation, coordinates, response.original, response.pronunciation, overlayId)
+          if (api === "gpt") {
+            showTranslationDialog(response.translation + "\n\n retrieving in-depth translation", coordinates, response.original, response.pronunciation, overlayId);
+          }
+          callTranslateWithText(response.original, "gpt", idToken, source_lang, target_lang, pronunciation)
+          .then(response => {
+            if (response.error) {
+              showTranslationDialog(`Error: translation is not valid: ${response.error}`, coordinates, "", undefined, overlayId)
+            } else if (response.translation) {
+              showTranslationDialog(response.translation, coordinates, response.original, response.pronunciation, overlayId)
+            } else {
+              showTranslationDialog(`Error: translation is not valid: ${response}`, coordinates, "", undefined, overlayId)
+            }
+          })
+          .catch(error => {
+            showTranslationDialog(`Error: ${error.message}`, coordinates, "", undefined, overlayId)
+          });
         } else {
-          showTranslationDialog(`Error: translation is not valid: ${response}`, coordinates, "", undefined, overlayId)
+          showTranslationDialog(`Error: translation is not valid: ${response}\n\n + in-depth translation failed`, coordinates, "", undefined, overlayId)
         }
-      })
-      .catch(error => {
-        showTranslationDialog(`Error: ${error.message}`, coordinates, "", undefined, overlayId)
-      });
-    } else {
-      showTranslationDialog(`Error: translation is not valid: ${response}`, coordinates, "", undefined, overlayId)
-    }
   })
   .catch(error => {
     showTranslationDialog(`Error: ${error.message}`, coordinates, "", undefined, overlayId)
