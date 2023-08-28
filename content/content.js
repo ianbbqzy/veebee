@@ -140,9 +140,9 @@ async function callTranslateAllWithScreenshot(image, source_lang, target_lang, a
   const headers = new Headers();
   headers.append('Authorization', `Bearer ${idToken}`);
   headers.append('Content-Type', `application/json`);
-
-  try {
-    const resp = await fetch(url + '/translate-img-all?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
+async function callTranslateAllWithScreenshot(image, source_lang, target_lang, api, idToken, coordinates, pronunciation) {
+    ...
+    const resp = await fetch(url + '/translate-img-all-stream?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({
@@ -151,9 +151,28 @@ async function callTranslateAllWithScreenshot(image, source_lang, target_lang, a
         'scrollY': window.scrollY,
         'coordinates': coordinates,
       })
-    }).then(res => res.json())
-
-    if (resp.error) {
+    })
+    const reader = resp.body.getReader();
+    let translations = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      translations += new TextDecoder("utf-8").decode(value);
+      for (var i = 0; i < translations.length; i++) {
+        var translation = translations[i];
+        const ith_coordinates = {
+          x: translation['bounding_box'][0] + coordinates.x,
+          y: translation['bounding_box'][1] + coordinates.y,
+          x2: translation['bounding_box'][0] + translation['bounding_box'][2] + coordinates.x,
+          y2: translation['bounding_box'][1] + translation['bounding_box'][3] + coordinates.y,
+        };
+        showTranslationDialog(translation.translation, ith_coordinates, translation.original, translation.pronunciation, "overlay" + i, true);
+      }
+    }
+    ...
+}
       return {"error": `Translation: ${resp.error}`};
     }
     return resp;
@@ -193,17 +212,27 @@ async function callTranslateWithScreenshot(image, source_lang, target_lang, api,
   const headers = new Headers();
   headers.append('Authorization', `Bearer ${idToken}`);
   headers.append('Content-Type', `application/json`);
-
-  try {
-    const resp = await fetch(url + '/translate-img?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
+async function callTranslateWithScreenshot(image, source_lang, target_lang, api, idToken, pronunciation) {
+    ...
+    const resp = await fetch(url + '/translate-img-stream?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({
         'imageDataUrl': image
       })
-    }).then(res => res.json())
-
-    if (resp.error) {
+    })
+    const reader = resp.body.getReader();
+    let translation = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      translation += new TextDecoder("utf-8").decode(value);
+      showTranslationDialog(translation, coordinates, "", undefined, overlayId)
+    }
+    ...
+}
       return {"error": `Translation: ${resp.error}`};
     }
     return {"translation": resp.translation, "original": resp.original, "pronunciation": resp.pronunciation};
