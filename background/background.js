@@ -34,6 +34,9 @@ chrome.storage.sync.get((config) => {
       all
     ), {})
   })
+  if (!config.streaming) {
+    chrome.storage.sync.set({streaming: 'off'})
+  }
 })
 
 // This is triggered when extension icon is clicked. This is the main entry point
@@ -141,13 +144,14 @@ async function callTranslateWithText(text, source_lang, target_lang, api, idToke
   headers.append('Content-Type', `application/json`);
 
   try {
-    const resp = await fetch(url + '/translate-text?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
+  const endpoint = config.streaming === 'on' ? '/translate-text-stream' : '/translate-text';
+  const resp = await fetch(url + endpoint + '?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({
         'text': text
       })
-    }).then(res => res.json())
+  }).then(res => res.json())
     if (resp.error) {
       return {"error": `Translation: ${resp.error}`};
     } else if (resp.translation) {
