@@ -179,7 +179,7 @@ var getTranslations = async (image, coordinates, api, idToken, source_lang, targ
         if (api === "gpt") {
           showTranslationDialog(translation.translation + "\n\n retrieving in-depth translation", ith_coordinates, translation.original, translation.pronunciation, "overlay" + i, true);
         } else {
-          showTranslationDialog(translation.translation + "\n\n retrieving in-depth translation", ith_coordinates, translation.original, translation.pronunciation, "overlay" + i);
+          showTranslationDialog(translation.translation + (response.error ? "\n\n + in-depth translation failed" : "") + "\n\n retrieving in-depth translation", ith_coordinates, translation.original, translation.pronunciation, "overlay" + i);
         if (api === "gpt") {
           showTranslationDialog(translation.translation + "\n\n retrieving in-depth translation", ith_coordinates, translation.original, translation.pronunciation, "overlay" + i, true);
           callTranslateWithText(translation.original, "gpt", idToken, source_lang, target_lang, pronunciation)
