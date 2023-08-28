@@ -26,7 +26,7 @@ class TranslationService:
         )
 
         print(completion.choices[0]['message'])
-        return completion.choices[0]['message']['content']
+    yield completion.choices[0]['message']['content']
     
     def call_deepl(self, text, source_lang, target_lang):
         target_lang = self.lang_map[target_lang]  # Updated to use language map
@@ -52,4 +52,4 @@ class TranslationService:
             return jsonify({"translation":  f"DeepL message: {json_resp['message']}"})
 
         print(json_resp['translations'][0]['text'])
-        return json_resp['translations'][0]['text']
+    yield json_resp['translations'][0]['text']
