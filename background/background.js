@@ -144,6 +144,42 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
 // Modify the callTranslateWithText function
 async function callTranslateWithText(text, source_lang, target_lang, api, idToken, pronunciation) {
+  // Get the OpenAI API Key and API Calls Location from the storage
+  const config = await new Promise(resolve => chrome.storage.sync.get(resolve));
+  const openai_api_key = config.openai_api_key;
+  const api_calls_location = config.api_calls_location;
+
+  // If the API is GPT and the API Calls Location is Frontend, make a direct chat completion request to OpenAI
+  if (api === 'gpt' && api_calls_location === 'frontend') {
+    const url = 'https://api.openai.com/v1/chat/completions';
+    const headers = new Headers();
+    headers.append('Authorization', `Bearer ${openai_api_key}`);
+    headers.append('Content-Type', `application/json`);
+
+    try {
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({
+          'model': 'gpt-3.5-turbo',
+          'messages': [
+            {'role': 'system', 'content': 'You are a helpful assistant.'},
+            {'role': 'user', 'content': text}
+          ]
+        })
+      }).then(res => res.json())
+      if (resp.error) {
+        return {"error": `Translation: ${resp.error}`};
+      } else if (resp.choices && resp.choices.length > 0 && resp.choices[0].message) {
+        return {"translation": resp.choices[0].message['content'].trim(), "pronunciation": undefined};
+      } else {
+        return {"error": `Error: translation is not valid: ${resp}`};
+      }
+    } catch (err) {
+      return {"error": `Translation: ${err.message}`};
+    }
+  }
+
   const url = "__BACKEND_URL__";
   const headers = new Headers();
   headers.append('Authorization', `Bearer ${idToken}`);
