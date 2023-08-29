@@ -268,6 +268,27 @@ m.mount(document.querySelector('main'), {
         )
       )
     ),
+
+    // Add the new option for streaming
+    m('.bs-callout',
+      m('h4.mdc-typography--headline5', 'Streaming'),
+      state.streaming.map((item) =>
+        m('label.s-label', {onupdate: onupdate(item)},
+          m('.mdc-radio',
+            m('input.mdc-radio__native-control', {
+              type: 'radio', name: 'streaming',
+              checked: item.checked && 'checked',
+              onchange: events.streaming(item)
+            }),
+            m('.mdc-radio__background',
+              m('.mdc-radio__outer-circle'),
+              m('.mdc-radio__inner-circle'),
+            ),
+          ),
+          m('span', item.title)
+        )
+      )
+    ),
   ]
 })
 
