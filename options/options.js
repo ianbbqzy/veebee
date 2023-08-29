@@ -93,6 +93,7 @@ chrome.commands.getAll((commands) => {
 // These are called when the user interacts with the UI
 // If keyboard shortcut is reset, call button function
 // If other options are changed (API, icon), call option function
+// Remove the streaming event handler
 var events = {
   option: (name, item) => () => {
     state[name].forEach((item) => item.checked = false)
@@ -114,13 +115,6 @@ var events = {
       shortcut: 'chrome://extensions/shortcuts',
       location: 'chrome://settings/downloads',
     }[action]})
-  },
-  // Add event handler for the streaming option
-  streaming: (item) => () => {
-    state.streaming.forEach((item) => item.checked = false)
-    item.checked = true
-
-    chrome.storage.sync.set({streaming: item.id})
   }
 }
 
@@ -278,7 +272,7 @@ m.mount(document.querySelector('main'), {
             m('input.mdc-radio__native-control', {
               type: 'radio', name: 'streaming',
               checked: item.checked && 'checked',
-              onchange: events.streaming(item)
+              onchange: events.option('streaming', item)
             }),
             m('.mdc-radio__background',
               m('.mdc-radio__outer-circle'),
