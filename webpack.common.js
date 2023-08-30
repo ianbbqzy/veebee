@@ -16,6 +16,7 @@ module.exports = {
     firebase_config: './options/firebase_config.js',
     signin: './options/signin.js',
     content: './content/content.js',
+    api: './content/api.js',
   },
   plugins: [
     // adds jquery to all modules. May not be necessary but need
