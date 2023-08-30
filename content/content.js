@@ -1,1 +1,1 @@
-import { getTranslation, getTranslations } from './apiCalls';
+// No functions to import as they have been moved to apiCalls.js
