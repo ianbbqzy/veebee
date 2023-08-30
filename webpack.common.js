@@ -104,4 +104,9 @@ module.exports = {
         },
     ],
   },
+  resolve: {
+    alias: {
+      apiCalls: path.resolve(__dirname, 'path/to/apiCalls.js'),
+    },
+  },
 };
