@@ -1,5 +1,5 @@
 import concurrent.futures
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 from functools import wraps
 from flask import request, jsonify
@@ -182,6 +182,23 @@ def process_ocr_result(ocr_result, source_lang, target_lang, user_id, translatio
     ocr_result['translation'] = translation
     ocr_result['pronunciation'] = pronunciation
     return ocr_result
+
+@app.route("/translate-text-stream", methods=["POST"])
+@authenticate
+def translate_text_stream(user_id):
+    source_lang = request.args.get('source_lang')
+    target_lang = request.args.get('target_lang', 'English')
+    text = request.json.get('text')
+    if source_lang not in ["Japanese", "Korean", "Chinese"]:
+        return jsonify({"error": "Unsupported language"}), 400
+    api = request.args.get('api')
+    if api == "gpt":
+        try:
+            return Response(translation_serivce.call_gpt_stream(text, source_lang, target_lang), mimetype='text/event-stream')
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+    else:
+        return jsonify({"error": "Invalid API"}), 400
 
 if __name__ == "__main__":
     app.run(port=3000)

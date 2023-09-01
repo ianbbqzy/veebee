@@ -53,3 +53,25 @@ class TranslationService:
 
         print(json_resp['translations'][0]['text'])
         return json_resp['translations'][0]['text']
+
+    def call_gpt_stream(self, text, source_lang, target_lang):
+        prompt = f'translate the {source_lang} phrase or word "{text}" to {target_lang}.'  
+        messages=[
+            {"role": "system", "content": """
+            You are a robotic translator who has mastered all languages. You provide the translation and breakdown
+            of the phrase or a word directly without trying to engage in a conversation. When given a phrase or word to be
+            translated, you first provide the orignal phrase or word to be translated, followed by the direc translation in English
+            and only the direct translation,
+            followed by the breakdown of the phrase into compound words or loan words if necessary and explain their definitions."""},
+            {"role": "user", "content": prompt}
+        ]
+        completion = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo-0613",
+            messages=messages,
+            temperature=0.2,
+            stream=True,
+        )
+
+        for message in completion:
+            print(message)
+            yield message['choices'][0]['delta'].get("content", "")
