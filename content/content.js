@@ -244,17 +244,7 @@ var getTranslation = async (image, coordinates, api, idToken, source_lang, targe
       showTranslationDialog(`Error: translation is not valid: ${response.error}`, coordinates, "", undefined, overlayId)
     } else if (response.translation) {
       if (api === "gpt") {
-        showTranslationDialog(response.translation + "\n\n retrieving in-depth translation", coordinates, response.original, response.pronunciation, overlayId)
-        callTranslateWithText(response.original, source_lang, target_lang, "gpt", idToken,  false)
-        .then(secondResponse => {
-          if (secondResponse.error) {
-            showTranslationDialog(response.translation + `\n\n Failed to retrieve in-depth translation: ${secondResponse.error}`, coordinates, response.original, response.pronunciation, overlayId)
-          } else if (secondResponse.translation) {
-            showTranslationDialog(secondResponse.translation, coordinates, response.original, response.pronunciation, overlayId)
-          } else {
-            showTranslationDialog(response.translation + "\n\n Failed to retrieve in-depth translation: translation not found in the response", coordinates, response.original, response.pronunciation, overlayId)
-          }
-        })
+        callTranslateWithTextStream(response.original, source_lang, target_lang, idToken, response.pronunciation, overlayId, coordinates)
         .catch(error => {
           showTranslationDialog(response.translation+ `\n\n Failed to retrieve in-depth translation: ${error}`, coordinates, response.original, response.pronunciation, overlayId)
         });
@@ -534,14 +524,14 @@ async function callTranslateWithText(text, source_lang, target_lang, api, idToke
   }
 }
 
-async function callTranslateWithTextStream(text, source_lang, target_lang, api, idToken, pronunciation) {
+async function callTranslateWithTextStream(text, source_lang, target_lang, idToken, pronunciation, overlayId, coordinates) {
   const url = process.env.BACKEND_URL;
   const headers = new Headers();
   headers.append('Authorization', `Bearer ${idToken}`);
   headers.append('Content-Type', `application/json`);
 
   try {
-    const resp = await fetch(url + '/translate-text-stream?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
+    const resp = await fetch(url + '/translate-text-stream?api=gpt&source_lang=' + source_lang + '&target_lang=' + target_lang, {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({
@@ -551,15 +541,19 @@ async function callTranslateWithTextStream(text, source_lang, target_lang, api, 
 
     const reader = resp.body.getReader();
     let chunks = '';
+
     while (true) {
       const { done, value } = await reader.read();
       if (done) {
         break;
       }
       chunks += new TextDecoder("utf-8").decode(value);
+      console.log(chunks)
       // Here you can process the chunk of translation
       // For example, you can update the translation dialog with the new chunk
-      updateTranslationDialog(chunks);
+      showTranslationDialog(chunks, coordinates, text, pronunciation, overlayId)
+      console.log(chunks)
+
     }
   } catch (err) {
     return {"error": `Translation: ${err.message}`};

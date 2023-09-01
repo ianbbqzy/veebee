@@ -59,12 +59,7 @@ var state = {
   userLimit: {
     requestCount: 0,
     limit: 0
-  },
-  // Add a new option for streaming
-  streaming: [
-    {id: 'on', title: 'On'},
-    {id: 'off', title: 'Off'}
-  ]
+  }
 }
 
 // Set the state of the options page based on the current config
@@ -75,8 +70,6 @@ chrome.storage.sync.get((config) => {
   state.source_lang.forEach((item) => item.checked = item.id === config.source_lang)
   state.target_lang.forEach((item) => item.checked = item.id === config.target_lang)
   state.icon.forEach((item) => item.checked = item.id === config.icon)
-  // Set the state for the streaming option
-  state.streaming.forEach((item) => item.checked = item.id === config.streaming)
   fetchUserLimit();
 
   m.redraw()
@@ -93,7 +86,6 @@ chrome.commands.getAll((commands) => {
 // These are called when the user interacts with the UI
 // If keyboard shortcut is reset, call button function
 // If other options are changed (API, icon), call option function
-// Remove the streaming event handler
 var events = {
   option: (name, item) => () => {
     state[name].forEach((item) => item.checked = false)
@@ -252,27 +244,6 @@ m.mount(document.querySelector('main'), {
               type: 'radio', name: 'icon',
               checked: item.checked && 'checked',
               onchange: events.option('icon', item)
-            }),
-            m('.mdc-radio__background',
-              m('.mdc-radio__outer-circle'),
-              m('.mdc-radio__inner-circle'),
-            ),
-          ),
-          m('span', item.title)
-        )
-      )
-    ),
-
-    // Add the new option for streaming
-    m('.bs-callout',
-      m('h4.mdc-typography--headline5', 'Streaming'),
-      state.streaming.map((item) =>
-        m('label.s-label', {onupdate: onupdate(item)},
-          m('.mdc-radio',
-            m('input.mdc-radio__native-control', {
-              type: 'radio', name: 'streaming',
-              checked: item.checked && 'checked',
-              onchange: events.option('streaming', item)
             }),
             m('.mdc-radio__background',
               m('.mdc-radio__outer-circle'),

@@ -72,5 +72,6 @@ class TranslationService:
             stream=True,
         )
 
-        for message in completion.stream():
-            yield message['message']['content']
+        for message in completion:
+            print(message)
+            yield message['choices'][0]['delta'].get("content", "")

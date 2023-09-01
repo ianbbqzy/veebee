@@ -194,10 +194,7 @@ def translate_text_stream(user_id):
     api = request.args.get('api')
     if api == "gpt":
         try:
-            def generate():
-                for translation in translation_serivce.call_gpt_stream(text, source_lang, target_lang):
-                    yield translation
-            return Response(generate(), mimetype='text/plain')
+            return Response(translation_serivce.call_gpt_stream(text, source_lang, target_lang), mimetype='text/event-stream')
         except ValueError as e:
             return jsonify({"error": str(e)}), 400
     else:
