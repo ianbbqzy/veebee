@@ -3,14 +3,16 @@ body {
   display: block;
   flex-direction: column;
   justify-content: center;
-  background: linear-gradient(#fff, #3c76b8);
+  background: linear-gradient(#fff, #49bac6);
+  background-size: 100% 100%;
+  background-attachment: fixed;
   font-family: "Lato", sans-serif;
-  width: 300px;
+  width: 600px;
   height: 230px;
 }
 
 h1 {
-  color: #3c76b8;
+  color: #49bac6;
   text-align: center;
   font-size: 40px;
   font-weight: 100;

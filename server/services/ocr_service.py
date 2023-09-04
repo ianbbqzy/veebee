@@ -61,7 +61,7 @@ class OCRService:
         """
         results = []
         
-        save_data_url_to_file(image_url, f'testFull.png')   
+        # save_data_url_to_file(image_url, f'testFull.png')   
 
         if bounding_boxes is None:
             bounding_boxes = [[0, 0, 1, 1]]
@@ -85,7 +85,7 @@ class OCRService:
         # Construct new image URL (this depends on how your system expects URLs to be formed)
         box_image_url = crop_image_data_url(image_url, pixel_box[0], pixel_box[1], pixel_box[2], pixel_box[3], img_dim=image_dim)
 
-        save_data_url_to_file(box_image_url, f'test{str(i)}.png')   
+        # save_data_url_to_file(box_image_url, f'test{str(i)}.png')   
         # Extract text from the cropped image using the bounding box
         original_text = self.annotate_image(box_image_url, source_lang=source_lang)
 
