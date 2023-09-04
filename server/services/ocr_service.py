@@ -63,8 +63,12 @@ class OCRService:
         
         # save_data_url_to_file(image_url, f'testFull.png')   
 
-        if bounding_boxes is None:
-            bounding_boxes = [[0, 0, 1, 1]]
+        if bounding_boxes is None or len(bounding_boxes) <= 1:
+            pixel_box = convert_box_to_pixel_values([0.5, 0.5, 1, 1], image_dim)
+            return [{
+                'original': self.annotate_image(image_url, source_lang=source_lang),
+                'bounding_box': [pixel_box[0], pixel_box[1], pixel_box[2]- pixel_box[0], pixel_box[3] - pixel_box[1]],
+            }]
 
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = []

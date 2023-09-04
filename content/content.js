@@ -121,10 +121,10 @@ var capture = () => {
               getTranslation(image, coordinates, config.api, config.idToken, config.source_lang, config.target_lang, config.pronunciation)
             } else {
               showTranslationDialog("translating", {
-                x: document.documentElement.clientWidth / 2,
-                y: document.documentElement.clientHeight / 2,
-                x2: document.documentElement.clientWidth / 2,
-                y2: document.documentElement.clientHeight / 2,
+                x: document.documentElement.clientWidth / 2  - 150,
+                y: document.documentElement.clientHeight / 2 - 150,
+                x2: document.documentElement.clientWidth / 2 - 150,
+                y2: document.documentElement.clientHeight / 2 - 150,
               }, "", undefined, "translatingOverlay")
               getTranslations(image, coordinates, config.api, config.idToken, config.source_lang, config.target_lang, config.pronunciation)
             }
