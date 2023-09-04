@@ -147,10 +147,6 @@ code { background: #ececec; padding: 5px 8px; border-radius: 3px; }
 .s-label .mdc-radio {
   display: inline-block;
 }
-.s-label span {
-  position: relative;
-  top: -15px;
-}
 
 .s-label em {
   font-style: normal;

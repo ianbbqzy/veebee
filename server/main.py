@@ -96,7 +96,6 @@ def translate_img(user_id):
         return jsonify({"error": f"You have exceeded your monthly request limit: {str(limit)}"}), 403
     users_service.increment_request_count(user_id)
     image_data_url = request.json.get('imageDataUrl')
-    print(source_lang)
     if source_lang not in ["Japanese", "Korean", "Chinese"]:
         return jsonify({"error": "Unsupported language"}), 400
     try:

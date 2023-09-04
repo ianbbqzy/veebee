@@ -3,11 +3,11 @@
 // Set default config values
 chrome.storage.sync.get((config) => {
   if (!config.api) {
-    chrome.storage.sync.set({api: 'deepl'})
+    chrome.storage.sync.set({api: 'gpt'})
   }
 
   if (!config.capture_mode) {
-    chrome.storage.sync.set({capture_mode: 'multiple'})
+    chrome.storage.sync.set({capture_mode: 'single'})
   }
 
   if (!config.pronunciation) {
@@ -29,7 +29,7 @@ chrome.storage.sync.get((config) => {
 
   chrome.action.setIcon({
     path: [16, 19, 38, 48, 128].reduce((all, size) => (
-      color = config.icon ? 'light' : 'dark',
+      color = 'rice',
       all[size] = `/icons/${color}/${size}x${size}.png`,
       all
     ), {})
@@ -40,13 +40,20 @@ chrome.storage.sync.get((config) => {
 // for screenshot capture. 
 // It injects the content script into the active tab.
 chrome.action.onClicked.addListener((tab) => {
-  // continue with the translation process.
-  chrome.storage.sync.get((config) => {
-    if (config.capture_mode === 'screen') {
-      pingContentScript(tab, 'screenCapture');
-    } else {
-      pingContentScript(tab, 'initCrop');
-    }
+  chrome.action.onClicked.addListener((tab) => {
+    // continue with the translation process.
+    chrome.storage.sync.get((config) => {
+      if (!config.idToken) {
+        // open options page if user is not logged in
+        chrome.runtime.openOptionsPage();
+      } else {
+        if (config.capture_mode === 'screen') {
+          pingContentScript(tab, 'screenCapture');
+        } else {
+          pingContentScript(tab, 'initCrop');
+        }
+      }
+    })
   })
 })
 
