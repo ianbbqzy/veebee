@@ -21,12 +21,23 @@ hard_limit = 1000
 cred = credentials.Certificate('firebaseServiceAccountKey.json')
 firebase_admin.initialize_app(cred)
 
+# Add the following line after loading the environment variables
+require_auth = os.getenv("REQUIRE_AUTH", "true").lower() == "true"
+
 # Decorator function to authenticate API requests
 def authenticate(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         # Get the authorization header from the request
         auth_header = request.headers.get('Authorization')
+        
+        if not require_auth:
+            kwargs['user_id'] = 'unauthenticated'
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                print(e)
+                return jsonify({'error': 'An error occurred while processing your request.'}), 500
         
         if not auth_header:
             return jsonify({'error': 'Unauthorized'}), 401
