@@ -40,17 +40,16 @@ chrome.storage.sync.get((config) => {
 // for screenshot capture. 
 // It injects the content script into the active tab.
 chrome.action.onClicked.addListener((tab) => {
-  // continue with the translation process.
   chrome.storage.sync.get((config) => {
-    if (!config.idToken) {
-      // open options page if user is not logged in
-      chrome.runtime.openOptionsPage();
-    } else {
+    if (process.env.SEND_AUTH === 'false' || config.idToken) {
       if (config.capture_mode === 'screen') {
         pingContentScript(tab, 'screenCapture');
       } else {
         pingContentScript(tab, 'initCrop');
       }
+    } else {
+      // open options page if user is not logged in
+      chrome.runtime.openOptionsPage();
     }
   })
 })
