@@ -103,7 +103,7 @@ var capture = () => {
       chrome.runtime.sendMessage({message: 'capture'}, (res) => {
         console.log("captured in background")
 
-        if (!config.idToken) {
+        if (process.env.SEND_AUTH === 'true' && !config.idToken) {
           if (config.capture_mode !== "single") {
             showTranslationDialog("Please login first. Right click on the extension icon and click on options.", 
             {
@@ -138,7 +138,9 @@ var capture = () => {
 async function callTranslateAllWithScreenshot(image, source_lang, target_lang, api, idToken, coordinates, pronunciation) {
   const url = process.env.BACKEND_URL;
   const headers = new Headers();
-  headers.append('Authorization', `Bearer ${idToken}`);
+  if (process.env.SEND_AUTH === 'true') {
+    headers.append('Authorization', `Bearer ${idToken}`);
+  }
   headers.append('Content-Type', `application/json`);
 
   try {
@@ -213,7 +215,9 @@ var getTranslations = async (image, coordinates, api, idToken, source_lang, targ
 async function callTranslateWithScreenshot(image, source_lang, target_lang, api, idToken, pronunciation) {
   const url = process.env.BACKEND_URL;
   const headers = new Headers();
-  headers.append('Authorization', `Bearer ${idToken}`);
+  if (process.env.SEND_AUTH === 'true') {
+    headers.append('Authorization', `Bearer ${idToken}`);
+  }
   headers.append('Content-Type', `application/json`);
 
   try {
@@ -501,7 +505,9 @@ function findParentOverlay(elements) {
 async function callTranslateWithText(text, source_lang, target_lang, api, idToken, pronunciation) {
   const url = process.env.BACKEND_URL;
   const headers = new Headers();
-  headers.append('Authorization', `Bearer ${idToken}`);
+  if (process.env.SEND_AUTH === 'true') {
+    headers.append('Authorization', `Bearer ${idToken}`);
+  }
   headers.append('Content-Type', `application/json`);
 
   try {
