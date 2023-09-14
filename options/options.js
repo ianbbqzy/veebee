@@ -225,20 +225,22 @@ m.mount(document.querySelector('main'), {
 })
 
 function fetchUserLimit() {
-  chrome.storage.sync.get(['idToken'], function(result) {
-    const idToken = result.idToken;
-    fetch('http://localhost:3000/get-user-limit', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${idToken}`
-      }
-    })
-    .then(response => response.json())
-    .then(data => {
-      state.userLimit.requestCount = data.request_count;
-      state.userLimit.limit = data.limit;
-      m.redraw();
-    })
-    .catch(error => console.error('Error:', error));
-  });
+  if (process.env.SEND_AUTH === 'true') {
+    chrome.storage.sync.get(['idToken'], function(result) {
+      const idToken = result.idToken;
+      fetch('http://localhost:3000/get-user-limit', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${idToken}`
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        state.userLimit.requestCount = data.request_count;
+        state.userLimit.limit = data.limit;
+        m.redraw();
+      })
+      .catch(error => console.error('Error:', error));
+    });
+  }
 }
