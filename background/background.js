@@ -41,7 +41,7 @@ chrome.storage.sync.get((config) => {
 // It injects the content script into the active tab.
 chrome.action.onClicked.addListener((tab) => {
   chrome.storage.sync.get((config) => {
-    if (process.env.SEND_AUTH === 'false' || config.idToken) {
+    if ('__SEND_AUTH__' === 'false' || config.idToken) {
       if (config.capture_mode === 'screen') {
         pingContentScript(tab, 'screenCapture');
       } else {
