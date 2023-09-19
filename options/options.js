@@ -25,6 +25,12 @@ document.querySelector('#sign_out').addEventListener('click', () => {
     auth.signOut();
 });
 
+chrome.runtime.onMessage.addListener((request) => {
+  if (request.message === 'logout') {
+    auth.signOut();
+  }
+});
+
 // Done authentication stuff
 
 // State used by the options page to determine which options are selected

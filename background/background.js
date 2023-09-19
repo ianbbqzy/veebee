@@ -1,8 +1,3 @@
-import { getAuth } from 'firebase/auth';
-import { firebaseApp } from './firebase_config';
-
-const auth = getAuth(firebaseApp);
-
 // for stuff that doesn't involve the DOM of the web page the user is viewing
 
 // Set default config values
@@ -97,6 +92,11 @@ chrome.runtime.onMessage.addListener((req, sender, res) => {
       chrome.action.setTitle({tabId: sender.tab.id, title: 'Crop Initialized'})
       chrome.action.setBadgeText({tabId: sender.tab.id, text: ''})
     }
+  } else if (req.message === 'logout') {
+    chrome.runtime.openOptionsPage();
+    setTimeout(() => {
+      chrome.runtime.sendMessage({message: 'logout'});
+    }, 1000);
   }
   return true
 })
@@ -158,10 +158,6 @@ async function callTranslateWithText(text, source_lang, target_lang, api, idToke
       })
     }).then(res => res.json())
     if (resp.error) {
-      if (resp.status === 401) {
-        auth.signOut();
-        chrome.runtime.openOptionsPage();
-      }
       return {"error": `Translation: ${resp.error}`};
     } else if (resp.translation) {
       return {"translation": resp.translation, "pronunciation": resp.pronunciation};
