@@ -2,8 +2,11 @@ import $ from 'jquery';
 import Jcrop from 'jquery-jcrop';
 import 'jquery-jcrop/css/jquery.Jcrop.min.css';
 import 'dotenv/config'
+import { getAuth } from 'firebase/auth';
+import { firebaseApp } from './firebase_config';
 
 let jcrop, selection;
+const auth = getAuth(firebaseApp);
 
 // Handles messages
 // currently we only expect messages from the background script.
@@ -245,6 +248,10 @@ var getTranslation = async (image, coordinates, api, idToken, source_lang, targe
   callTranslateWithScreenshot(image, source_lang, target_lang, "deepl", idToken, pronunciation)
   .then(response => {
     if (response.error) {
+      if (response.status === 401) {
+        auth.signOut();
+        chrome.runtime.openOptionsPage();
+      }
       showTranslationDialog(`Error: translation is not valid: ${response.error}`, coordinates, "", undefined, overlayId)
     } else if (response.translation) {
       if (api === "gpt") {
