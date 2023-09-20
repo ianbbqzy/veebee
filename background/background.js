@@ -96,7 +96,7 @@ chrome.runtime.onMessage.addListener((req, sender, res) => {
     chrome.runtime.openOptionsPage();
     setTimeout(() => {
       chrome.runtime.sendMessage({message: 'logout'});
-    }, 1000);
+    }, 500);
   }
   return true
 })

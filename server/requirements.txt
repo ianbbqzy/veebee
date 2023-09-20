@@ -11,6 +11,7 @@ charset-normalizer==3.2.0
 click==8.1.4
 cmake==3.26.4
 cryptography==41.0.1
+eventlet==0.33.3
 filelock==3.12.2
 fire==0.5.0
 firebase-admin==6.2.0
