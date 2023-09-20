@@ -523,6 +523,11 @@ function createSidePanel() {
   closeButton.innerText = 'Close Side Panel';
   closeButton.addEventListener('click', closeSidePanel);
   sidePanel.appendChild(closeButton);
+
+  const minimizeButton = document.createElement('button');
+  minimizeButton.innerText = 'Minimize Side Panel';
+  minimizeButton.addEventListener('click', minimizeSidePanel); // assuming minimizeSidePanel is a defined function
+  sidePanel.appendChild(minimizeButton);
 }
 
 function openSidePanel() {
