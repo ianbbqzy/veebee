@@ -153,13 +153,12 @@ async function callTranslateAllWithScreenshot(image, source_lang, target_lang, a
         'scrollY': window.scrollY,
         'coordinates': coordinates,
       })
-    }).then(res => res.json())
-
+    })
     const statusCode = response.status;
-    const resp = await response.json();
     if (statusCode === 401) {
       chrome.runtime.sendMessage({message: 'logout'});
     }
+    const resp = await response.json();
 
     if (resp.error) {
       return {"error": `Translation: ${resp.error}`};
@@ -236,12 +235,10 @@ async function callTranslateWithScreenshot(image, source_lang, target_lang, api,
     })
 
     const statusCode = response.status;
-    const resp = await response.json();
     if (statusCode === 401) {
       chrome.runtime.sendMessage({message: 'logout'});
     }
-
-
+    const resp = await response.json();
     if (resp.error) {
       return {"error": `Translation: ${resp.error}`, status: resp.status};
     }
@@ -533,13 +530,12 @@ async function callTranslateWithText(text, source_lang, target_lang, api, idToke
     })
 
     const statusCode = response.status;
-    const resp = await response.json();
     if (statusCode === 401) {
       
       chrome.runtime.sendMessage({message: 'logout'});
     }
 
-  
+    const resp = await response.json();
     if (resp.error) {
       return {"error": `Translation: ${resp.error}`, status: resp.status};
     } else if (resp.translation) {
@@ -567,13 +563,11 @@ async function callTranslateWithTextStream(text, source_lang, target_lang, idTok
       })
     })
     const statusCode = response.status;
-    const resp = await response.json();
     if (statusCode === 401) {
-      
       chrome.runtime.sendMessage({message: 'logout'});
     }
 
-    const reader = resp.body.getReader();
+    const reader = response.body.getReader();
     let chunks = '';
 
     while (true) {
