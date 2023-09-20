@@ -92,6 +92,11 @@ chrome.runtime.onMessage.addListener((req, sender, res) => {
       chrome.action.setTitle({tabId: sender.tab.id, title: 'Crop Initialized'})
       chrome.action.setBadgeText({tabId: sender.tab.id, text: ''})
     }
+  } else if (req.message === 'logout') {
+    chrome.runtime.openOptionsPage();
+    setTimeout(() => {
+      chrome.runtime.sendMessage({message: 'logout'});
+    }, 1000);
   }
   return true
 })

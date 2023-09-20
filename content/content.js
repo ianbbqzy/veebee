@@ -144,7 +144,7 @@ async function callTranslateAllWithScreenshot(image, source_lang, target_lang, a
   headers.append('Content-Type', `application/json`);
 
   try {
-    const resp = await fetch(url + '/translate-img-all?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
+    const response = await fetch(url + '/translate-img-all?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({
@@ -154,6 +154,12 @@ async function callTranslateAllWithScreenshot(image, source_lang, target_lang, a
         'coordinates': coordinates,
       })
     }).then(res => res.json())
+
+    const statusCode = response.status;
+    const resp = await response.json();
+    if (statusCode === 401) {
+      chrome.runtime.sendMessage({message: 'logout'});
+    }
 
     if (resp.error) {
       return {"error": `Translation: ${resp.error}`};
@@ -221,16 +227,23 @@ async function callTranslateWithScreenshot(image, source_lang, target_lang, api,
   headers.append('Content-Type', `application/json`);
 
   try {
-    const resp = await fetch(url + '/translate-img?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
+    const response = await fetch(url + '/translate-img?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({
         'imageDataUrl': image
       })
-    }).then(res => res.json())
+    })
+
+    const statusCode = response.status;
+    const resp = await response.json();
+    if (statusCode === 401) {
+      chrome.runtime.sendMessage({message: 'logout'});
+    }
+
 
     if (resp.error) {
-      return {"error": `Translation: ${resp.error}`};
+      return {"error": `Translation: ${resp.error}`, status: resp.status};
     }
     return {"translation": resp.translation, "original": resp.original, "pronunciation": resp.pronunciation};
   } catch (err) {
@@ -511,15 +524,24 @@ async function callTranslateWithText(text, source_lang, target_lang, api, idToke
   headers.append('Content-Type', `application/json`);
 
   try {
-    const resp = await fetch(url + '/translate-text?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
+    const response = await fetch(url + '/translate-text?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({
         'text': text
       })
-    }).then(res => res.json())
+    })
+
+    const statusCode = response.status;
+    const resp = await response.json();
+    if (statusCode === 401) {
+      
+      chrome.runtime.sendMessage({message: 'logout'});
+    }
+
+  
     if (resp.error) {
-      return {"error": `Translation: ${resp.error}`};
+      return {"error": `Translation: ${resp.error}`, status: resp.status};
     } else if (resp.translation) {
       return {"translation": resp.translation, "pronunciation": resp.pronunciation};
     } else {
@@ -537,13 +559,19 @@ async function callTranslateWithTextStream(text, source_lang, target_lang, idTok
   headers.append('Content-Type', `application/json`);
 
   try {
-    const resp = await fetch(url + '/translate-text-stream?api=gpt&source_lang=' + source_lang + '&target_lang=' + target_lang, {
+    const response = await fetch(url + '/translate-text-stream?api=gpt&source_lang=' + source_lang + '&target_lang=' + target_lang, {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({
         'text': text
       })
     })
+    const statusCode = response.status;
+    const resp = await response.json();
+    if (statusCode === 401) {
+      
+      chrome.runtime.sendMessage({message: 'logout'});
+    }
 
     const reader = resp.body.getReader();
     let chunks = '';
@@ -554,12 +582,9 @@ async function callTranslateWithTextStream(text, source_lang, target_lang, idTok
         break;
       }
       chunks += new TextDecoder("utf-8").decode(value);
-      console.log(chunks)
       // Here you can process the chunk of translation
       // For example, you can update the translation dialog with the new chunk
       showTranslationDialog(chunks, coordinates, text, pronunciation, overlayId)
-      console.log(chunks)
-
     }
   } catch (err) {
     return {"error": `Translation: ${err.message}`};
