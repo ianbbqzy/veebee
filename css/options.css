@@ -132,7 +132,7 @@ code { background: #ececec; padding: 5px 8px; border-radius: 3px; }
   display: block;
   cursor: pointer;
   max-width: 400px;
-  height: 40px;
+  /* height: 40px; */
   padding: 5px;
   margin: 0 0 20px 0; // Increase the bottom margin to account for the space of the image
   border-radius: 3px;
@@ -156,7 +156,12 @@ code { background: #ececec; padding: 5px 8px; border-radius: 3px; }
 
 /* Add CSS styles for the image */
 .s-label img {
-  display: block;
-  margin-top: 10px;
+  display: inline-block; /* Change display to inline-block */
+  margin: 0 10px; /* Add horizontal margin */
+  vertical-align: middle; /* Align it vertically in the middle */
   object-fit: cover;
+}
+
+.s-label .mdc-radio {
+  display: inline-block; /* Make radio buttons inline elements */
 }
