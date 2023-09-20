@@ -321,6 +321,7 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
       <button id="overlay-minimize-button${overlayID}" style="margin-right: 5px;">–</button>
       <button id="overlay-close-button${overlayID}">OK</button>
       <button id="dragButton${overlayID}" style="margin-right: 5px;">Drag</button>
+      <button id="openSidePanelButton${overlayID}">Open Side Panel</button>
     </div>
     <p id="translation${overlayID}">${translation}</p>
     <audio id="pronunciation${overlayID}" src="data:audio/mp3;base64,${pronunciation}" style="display: none;"></audio>
@@ -450,6 +451,8 @@ function attachEventListeners(overlayID, spawnRight, spawnX, pronunciation) {
     document.onmouseup = null;
     document.onmousemove = null;
   }
+  const openSidePanelButton = shadowRoot.getElementById("openSidePanelButton" + overlayID);
+  openSidePanelButton.addEventListener("click", openSidePanel);
 }
 
 function crop (image, area, done) {
@@ -497,3 +500,47 @@ function findParentOverlay(elements) {
   const parent = Array.from(elements).find(element => element.shadowRoot.contains(node)) || null;
   return parent;
 }
+
+let sidePanel;
+let lastContent;
+
+function createSidePanel() {
+  sidePanel = document.createElement('div');
+  sidePanel.id = 'sidePanel';
+  sidePanel.style.display = 'none';
+  sidePanel.style.position = 'fixed';
+  sidePanel.style.right = '0';
+  sidePanel.style.top = '0';
+  sidePanel.style.width = '200px';
+  sidePanel.style.height = '100vh';
+  sidePanel.style.backgroundColor = '#f0f0f0';
+  sidePanel.style.zIndex = '1000';
+  sidePanel.style.padding = '10px';
+  sidePanel.style.boxShadow = '-2px 0 5px rgba(0,0,0,0.1)';
+  document.body.appendChild(sidePanel);
+
+  const closeButton = document.createElement('button');
+  closeButton.innerText = 'Close Side Panel';
+  closeButton.addEventListener('click', closeSidePanel);
+  sidePanel.appendChild(closeButton);
+}
+
+function openSidePanel() {
+  sidePanel.style.display = 'block';
+  if (localStorage.getItem('lastContent')) {
+    lastContent = localStorage.getItem('lastContent');
+    sidePanel.innerHTML = lastContent;
+  }
+}
+
+function closeSidePanel() {
+  sidePanel.style.display = 'none';
+  localStorage.setItem('lastContent', lastContent);
+}
+
+function updateContent(content) {
+  lastContent = content;
+  sidePanel.innerHTML = content;
+}
+
+createSidePanel();
