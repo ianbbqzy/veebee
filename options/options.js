@@ -43,7 +43,7 @@ var state = {
   ],
   capture_mode: [
     {id: 'single', title: 'Capture a single text bubble (for stability)'},
-    {id: 'multiple', title: 'Capture multiple text bubbles (for convenience)'},
+    {id: 'multiple', title: 'Capture multiple text bubbles (for convenience)', image: './icons/multiple_instructions.jpg'},
     {id: 'screen', title: 'Capture the entire screen'}
   ],
   pronunciation: [
@@ -143,7 +143,7 @@ m.mount(document.querySelector('main'), {
               m('.mdc-radio__inner-circle'),
             ),
           ),
-          m('span', item.title)
+          m('span', item.title),
         )
       )
     ),
@@ -163,7 +163,12 @@ m.mount(document.querySelector('main'), {
               m('.mdc-radio__inner-circle'),
             ),
           ),
-          m('span', item.title)
+          m('span', item.title),
+          // Conditionally render an image only when an image source is provided
+          item.image && m('img', {
+            src: item.image,
+            style: {width: '550px'} // Set a fixed size for the image
+          })
         )
       )
     ),
