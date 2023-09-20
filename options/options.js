@@ -38,8 +38,8 @@ chrome.runtime.onMessage.addListener((request) => {
 var state = {
   shortcut: {},
   api: [
-    {id: 'gpt', title: 'GPT (For in-depth translation)'},
-    {id: 'deepl', title: 'DeepL (For quick translation)'}
+    {id: 'gpt', title: 'GPT (For in-depth translation)', image: null},
+    {id: 'deepl', title: 'DeepL (For quick translation)', image: null}
   ],
   capture_mode: [
     {id: 'single', title: 'Capture a single text bubble (for stability)'},
@@ -143,7 +143,12 @@ m.mount(document.querySelector('main'), {
               m('.mdc-radio__inner-circle'),
             ),
           ),
-          m('span', item.title)
+          m('span', item.title),
+          // Conditionally render an image only when an image source is provided
+          item.image && m('img', {
+            src: item.image,
+            style: {width: '100px', height: '100px'} // Set a fixed size for the image
+          })
         )
       )
     ),
