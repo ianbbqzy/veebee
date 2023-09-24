@@ -1,9 +1,6 @@
 runtime: python39
 instance_class: F4_1G
 entrypoint: gunicorn -t 60 -b :$PORT  main:app
-automatic_scaling:
-  min_idle_instances: 1
-  max_idle_instances: 1
 
 handlers:
 - url: /.*
