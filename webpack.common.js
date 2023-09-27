@@ -62,7 +62,8 @@ module.exports = {
           transform(content) {
             const replacedContent = content
               .toString()
-              .replace('__BACKEND_URL__', process.env.BACKEND_URL);
+              .replace('__BACKEND_URL__', process.env.BACKEND_URL)
+              .replace('__SEND_AUTH__', process.env.SEND_AUTH);
             return Buffer.from(replacedContent);
           },
         },  

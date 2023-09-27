@@ -103,7 +103,7 @@ var capture = () => {
       chrome.runtime.sendMessage({message: 'capture'}, (res) => {
         console.log("captured in background")
 
-        if (!config.idToken) {
+        if (process.env.SEND_AUTH === 'true' && !config.idToken) {
           if (config.capture_mode !== "single") {
             showTranslationDialog("Please login first. Right click on the extension icon and click on options.", 
             {
@@ -121,10 +121,10 @@ var capture = () => {
               getTranslation(image, coordinates, config.api, config.idToken, config.source_lang, config.target_lang, config.pronunciation)
             } else {
               showTranslationDialog("translating", {
-                x: document.documentElement.clientWidth / 2,
-                y: document.documentElement.clientHeight / 2,
-                x2: document.documentElement.clientWidth / 2,
-                y2: document.documentElement.clientHeight / 2,
+                x: document.documentElement.clientWidth / 2  - 150,
+                y: document.documentElement.clientHeight / 2 - 100,
+                x2: document.documentElement.clientWidth / 2 - 150,
+                y2: document.documentElement.clientHeight / 2 - 100,
               }, "", undefined, "translatingOverlay")
               getTranslations(image, coordinates, config.api, config.idToken, config.source_lang, config.target_lang, config.pronunciation)
             }
@@ -138,11 +138,13 @@ var capture = () => {
 async function callTranslateAllWithScreenshot(image, source_lang, target_lang, api, idToken, coordinates, pronunciation) {
   const url = process.env.BACKEND_URL;
   const headers = new Headers();
-  headers.append('Authorization', `Bearer ${idToken}`);
+  if (process.env.SEND_AUTH === 'true') {
+    headers.append('Authorization', `Bearer ${idToken}`);
+  }
   headers.append('Content-Type', `application/json`);
 
   try {
-    const resp = await fetch(url + '/translate-img-all?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
+    const response = await fetch(url + '/translate-img-all?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({
@@ -151,7 +153,12 @@ async function callTranslateAllWithScreenshot(image, source_lang, target_lang, a
         'scrollY': window.scrollY,
         'coordinates': coordinates,
       })
-    }).then(res => res.json())
+    })
+    const statusCode = response.status;
+    if (statusCode === 401) {
+      chrome.runtime.sendMessage({message: 'logout'});
+    }
+    const resp = await response.json();
 
     if (resp.error) {
       return {"error": `Translation: ${resp.error}`};
@@ -213,20 +220,27 @@ var getTranslations = async (image, coordinates, api, idToken, source_lang, targ
 async function callTranslateWithScreenshot(image, source_lang, target_lang, api, idToken, pronunciation) {
   const url = process.env.BACKEND_URL;
   const headers = new Headers();
-  headers.append('Authorization', `Bearer ${idToken}`);
+  if (process.env.SEND_AUTH === 'true') {
+    headers.append('Authorization', `Bearer ${idToken}`);
+  }
   headers.append('Content-Type', `application/json`);
 
   try {
-    const resp = await fetch(url + '/translate-img?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
+    const response = await fetch(url + '/translate-img?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({
         'imageDataUrl': image
       })
-    }).then(res => res.json())
+    })
 
+    const statusCode = response.status;
+    if (statusCode === 401) {
+      chrome.runtime.sendMessage({message: 'logout'});
+    }
+    const resp = await response.json();
     if (resp.error) {
-      return {"error": `Translation: ${resp.error}`};
+      return {"error": `Translation: ${resp.error}`, status: resp.status};
     }
     return {"translation": resp.translation, "original": resp.original, "pronunciation": resp.pronunciation};
   } catch (err) {
@@ -244,17 +258,7 @@ var getTranslation = async (image, coordinates, api, idToken, source_lang, targe
       showTranslationDialog(`Error: translation is not valid: ${response.error}`, coordinates, "", undefined, overlayId)
     } else if (response.translation) {
       if (api === "gpt") {
-        showTranslationDialog(response.translation + "\n\n retrieving in-depth translation", coordinates, response.original, response.pronunciation, overlayId)
-        callTranslateWithText(response.original, source_lang, target_lang, "gpt", idToken,  false)
-        .then(secondResponse => {
-          if (secondResponse.error) {
-            showTranslationDialog(response.translation + `\n\n Failed to retrieve in-depth translation: ${secondResponse.error}`, coordinates, response.original, response.pronunciation, overlayId)
-          } else if (secondResponse.translation) {
-            showTranslationDialog(secondResponse.translation, coordinates, response.original, response.pronunciation, overlayId)
-          } else {
-            showTranslationDialog(response.translation + "\n\n Failed to retrieve in-depth translation: translation not found in the response", coordinates, response.original, response.pronunciation, overlayId)
-          }
-        })
+        callTranslateWithTextStream(response.original, source_lang, target_lang, idToken, response.pronunciation, overlayId, coordinates)
         .catch(error => {
           showTranslationDialog(response.translation+ `\n\n Failed to retrieve in-depth translation: ${error}`, coordinates, response.original, response.pronunciation, overlayId)
         });
@@ -511,23 +515,70 @@ function findParentOverlay(elements) {
 async function callTranslateWithText(text, source_lang, target_lang, api, idToken, pronunciation) {
   const url = process.env.BACKEND_URL;
   const headers = new Headers();
-  headers.append('Authorization', `Bearer ${idToken}`);
+  if (process.env.SEND_AUTH === 'true') {
+    headers.append('Authorization', `Bearer ${idToken}`);
+  }
   headers.append('Content-Type', `application/json`);
 
   try {
-    const resp = await fetch(url + '/translate-text?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
+    const response = await fetch(url + '/translate-text?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({
         'text': text
       })
-    }).then(res => res.json())
+    })
+
+    const statusCode = response.status;
+    if (statusCode === 401) {
+      
+      chrome.runtime.sendMessage({message: 'logout'});
+    }
+
+    const resp = await response.json();
     if (resp.error) {
-      return {"error": `Translation: ${resp.error}`};
+      return {"error": `Translation: ${resp.error}`, status: resp.status};
     } else if (resp.translation) {
       return {"translation": resp.translation, "pronunciation": resp.pronunciation};
     } else {
       return {"error": `Error: translation is not valid: ${resp}`};
+    }
+  } catch (err) {
+    return {"error": `Translation: ${err.message}`};
+  }
+}
+
+async function callTranslateWithTextStream(text, source_lang, target_lang, idToken, pronunciation, overlayId, coordinates) {
+  const url = process.env.BACKEND_URL;
+  const headers = new Headers();
+  headers.append('Authorization', `Bearer ${idToken}`);
+  headers.append('Content-Type', `application/json`);
+
+  try {
+    const response = await fetch(url + '/translate-text-stream?api=gpt&source_lang=' + source_lang + '&target_lang=' + target_lang, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({
+        'text': text
+      })
+    })
+    const statusCode = response.status;
+    if (statusCode === 401) {
+      chrome.runtime.sendMessage({message: 'logout'});
+    }
+
+    const reader = response.body.getReader();
+    let chunks = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      chunks += new TextDecoder("utf-8").decode(value);
+      // Here you can process the chunk of translation
+      // For example, you can update the translation dialog with the new chunk
+      showTranslationDialog(chunks, coordinates, text, pronunciation, overlayId)
     }
   } catch (err) {
     return {"error": `Translation: ${err.message}`};

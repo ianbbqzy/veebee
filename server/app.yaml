@@ -1,6 +1,6 @@
 runtime: python39
 instance_class: F4_1G
-entrypoint: gunicorn -b :$PORT main:app
+entrypoint: gunicorn -t 60 -b :$PORT  main:app
 
 handlers:
 - url: /.*

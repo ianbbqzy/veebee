@@ -1,5 +1,5 @@
 import concurrent.futures
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 from functools import wraps
 from flask import request, jsonify
@@ -21,12 +21,23 @@ hard_limit = 1000
 cred = credentials.Certificate('firebaseServiceAccountKey.json')
 firebase_admin.initialize_app(cred)
 
+# Add the following line after loading the environment variables
+require_auth = os.getenv("REQUIRE_AUTH", "true").lower() == "true"
+
 # Decorator function to authenticate API requests
 def authenticate(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         # Get the authorization header from the request
         auth_header = request.headers.get('Authorization')
+        
+        if not require_auth:
+            kwargs['user_id'] = 'unauthenticated'
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                print(e)
+                return jsonify({'error': 'An error occurred while processing your request.'}), 500
         
         if not auth_header:
             return jsonify({'error': 'Unauthorized'}), 401
@@ -96,7 +107,6 @@ def translate_img(user_id):
         return jsonify({"error": f"You have exceeded your monthly request limit: {str(limit)}"}), 403
     users_service.increment_request_count(user_id)
     image_data_url = request.json.get('imageDataUrl')
-    print(source_lang)
     if source_lang not in ["Japanese", "Korean", "Chinese"]:
         return jsonify({"error": "Unsupported language"}), 400
     try:
@@ -182,6 +192,23 @@ def process_ocr_result(ocr_result, source_lang, target_lang, user_id, translatio
     ocr_result['translation'] = translation
     ocr_result['pronunciation'] = pronunciation
     return ocr_result
+
+@app.route("/translate-text-stream", methods=["POST"])
+@authenticate
+def translate_text_stream(user_id):
+    source_lang = request.args.get('source_lang')
+    target_lang = request.args.get('target_lang', 'English')
+    text = request.json.get('text')
+    if source_lang not in ["Japanese", "Korean", "Chinese"]:
+        return jsonify({"error": "Unsupported language"}), 400
+    api = request.args.get('api')
+    if api == "gpt":
+        try:
+            return Response(translation_serivce.call_gpt_stream(text, source_lang, target_lang), mimetype='text/event-stream')
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+    else:
+        return jsonify({"error": "Invalid API"}), 400
 
 if __name__ == "__main__":
     app.run(port=3000)
