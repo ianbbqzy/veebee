@@ -356,7 +356,11 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
         flex-grow: 1;
         overflow: auto;
         top: 10px;
+        color: black;
         white-space: pre-line; /* Add this line to preserve line breaks */
+      }
+      #original${overlayID} {
+        color: black;
       }
       /* Add other styles here */
     </style>
