@@ -368,6 +368,7 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
     <div class="overlay-controls" style="right: 5px; display: flex;">
       <button id="playButton${overlayID}" style="margin-right: 5px;">Play Pronunciation</button>
       <button id="toggleButton${overlayID}" style="margin-right: 5px;">Toggle</button>
+      <button id="optionsButton${overlayID}" style="margin-right: 5px;">Options</button>
       <button id="overlay-minimize-button${overlayID}" style="margin-right: 5px;">–</button>
       <button id="overlay-close-button${overlayID}">OK</button>
     </div>
@@ -378,6 +379,11 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
   
   // Append the overlay to the document body
   document.body.appendChild(overlay);
+
+  // Add event listener to the new button
+  const optionsButton = shadowRoot.querySelector("#optionsButton" + overlayID);
+  optionsButton.addEventListener("click", () => chrome.runtime.openOptionsPage());
+
   attachEventListeners(overlayID, spawnRight, spawnX, pronunciation);
   if (minimize) {
     minimizeOverlay(overlayID, spawnRight, spawnX, pronunciation)
