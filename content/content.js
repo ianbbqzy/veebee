@@ -368,6 +368,7 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
     <div class="overlay-controls" style="right: 5px; display: flex;">
       <button id="playButton${overlayID}" style="margin-right: 5px;">Play Pronunciation</button>
       <button id="toggleButton${overlayID}" style="margin-right: 5px;">Toggle</button>
+      <button id="overlay-settings-button${overlayID}" style="margin-right: 5px;">Settings</button>
       <button id="overlay-minimize-button${overlayID}" style="margin-right: 5px;">–</button>
       <button id="overlay-close-button${overlayID}">OK</button>
     </div>
@@ -378,6 +379,10 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
   
   // Append the overlay to the document body
   document.body.appendChild(overlay);
+
+  // Add event listener to the new settings button
+  shadowRoot.querySelector("#overlay-settings-button" + overlayID).addEventListener("click", () => chrome.runtime.openOptionsPage());
+
   attachEventListeners(overlayID, spawnRight, spawnX, pronunciation);
   if (minimize) {
     minimizeOverlay(overlayID, spawnRight, spawnX, pronunciation)
@@ -412,6 +417,9 @@ function minimizeOverlay(overlayID, spawnRight, spawnX, pronunciation) {
     <button id="overlay-restore-button${overlayID}">+</button>
   `;
   shadowRoot.querySelector("#overlay-restore-button" + overlayID).addEventListener("click", () => restoreOverlay(overlayID, spawnRight, spawnX, pronunciation));
+
+  // Add event listener to the new settings button
+  shadowRoot.querySelector("#overlay-settings-button" + overlayID).addEventListener("click", () => chrome.runtime.openOptionsPage());
 }
 
 function restoreOverlay(overlayID, spawnRight, spawnX, pronunciation) {
@@ -436,6 +444,9 @@ function restoreOverlay(overlayID, spawnRight, spawnX, pronunciation) {
 
   shadowRoot.innerHTML = overlay.dataset.initialHtml;
   shadowRoot.querySelector('style').textContent = combinedStyles;
+
+  // Add event listener to the new settings button
+  shadowRoot.querySelector("#overlay-settings-button" + overlayID).addEventListener("click", () => chrome.runtime.openOptionsPage());
 
   attachEventListeners(overlayID, spawnRight, spawnX, pronunciation);
 }
@@ -467,6 +478,12 @@ function attachEventListeners(overlayID, spawnRight, spawnX, pronunciation) {
       translationElement.style.display = isTranslationVisible ? "none" : "block";
       originalElement.style.display = isTranslationVisible ? "block" : "none";
   });
+
+  // Add event listener to the new settings button
+  const settingsButton = shadowRoot.querySelector("#overlay-settings-button" + overlayID);
+  if (settingsButton) {
+    settingsButton.addEventListener("click", () => chrome.runtime.openOptionsPage());
+  }
 }
 
 function crop (image, area, done) {
