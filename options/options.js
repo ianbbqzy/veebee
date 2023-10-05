@@ -65,8 +65,8 @@ var state = {
   // Add OpenAI API Key and API Calls Location to the state
   openai_api_key: '',
   api_calls_location: [
-    {id: 'frontend', title: 'Frontend'},
-    {id: 'backend', title: 'Backend'}
+    {id: 'Frontend', title: 'Frontend'},
+    {id: 'Backend', title: 'Backend'}
   ]
 }
 
@@ -242,9 +242,8 @@ m.mount(document.querySelector('main'), {
         )
       )
     ),
-    // Add OpenAI API Key and API Calls Location to the view
     m('.bs-callout',
-      m('h4.mdc-typography--headline5', 'OpenAI API Key'),
+      m('h4.mdc-typography--headline5', 'OpenAI API Key (Enter your own key and select Frontend as the API Calls Location for slightly faster GPT translations)'),
       m('input.mdc-text-field__input', {
         type: 'text',
         id: 'openai_api_key',
