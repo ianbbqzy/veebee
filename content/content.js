@@ -368,8 +368,8 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
     <div class="overlay-controls" style="right: 5px; display: flex;">
       <button id="playButton${overlayID}" style="margin-right: 5px;">Play Pronunciation</button>
       <button id="toggleButton${overlayID}" style="margin-right: 5px;">Toggle</button>
-      <button id="overlay-settings-button${overlayID}" style="margin-right: 5px;">Settings</button>
       <button id="overlay-minimize-button${overlayID}" style="margin-right: 5px;">–</button>
+      <button id="overlay-settings-button${overlayID}" style="margin-right: 5px;">Settings</button>
       <button id="overlay-close-button${overlayID}">OK</button>
     </div>
     <p id="translation${overlayID}">${translation}</p>
