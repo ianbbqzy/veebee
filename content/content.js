@@ -366,6 +366,7 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
     </style>
     <!-- Overlay content -->
     <div class="overlay-controls" style="right: 5px; display: flex;">
+      <button id="optionsButton${overlayID}" style="margin-right: 5px;">Options</button>
       <button id="playButton${overlayID}" style="margin-right: 5px;">Play Pronunciation</button>
       <button id="toggleButton${overlayID}" style="margin-right: 5px;">Toggle</button>
       <button id="overlay-minimize-button${overlayID}" style="margin-right: 5px;">–</button>
@@ -454,6 +455,9 @@ function attachEventListeners(overlayID, spawnRight, spawnX, pronunciation) {
   } else {
     playButton.disabled = true;
   }
+
+  const optionsButton = shadowRoot.querySelector("#optionsButton" + overlayID);
+  optionsButton.addEventListener("click", () => chrome.runtime.openOptionsPage());
 
   shadowRoot.querySelector("#overlay-minimize-button" + overlayID).addEventListener("click", () => minimizeOverlay(overlayID, spawnRight, spawnX, pronunciation));
   shadowRoot.querySelector("#overlay-close-button" + overlayID).addEventListener("click", () => overlay.remove());
