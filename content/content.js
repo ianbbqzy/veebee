@@ -655,11 +655,12 @@ async function callTranslateWithTextStream(text, source_lang, target_lang, idTok
     headers.append('Content-Type', `application/json`);
 
     try {
-      const resp = await fetch(url, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify({
           'model': 'gpt-3.5-turbo',
+          'stream': true,
           'messages': [
             {'role': 'system', 'content': `
 You are a robotic translator who has mastered all languages. You provide the translation and breakdown
@@ -692,13 +693,38 @@ Breakdown:
             {'role': 'user', 'content': `translate the ${source_lang} phrase or word "${text}" to ${target_lang}.`}
           ]
         })
-      }).then(res => res.json())
-      if (resp.error) {
-        return {"error": `Translation: ${resp.error}`};
-      } else if (resp.choices && resp.choices.length > 0 && resp.choices[0].message) {
-        showTranslationDialog(resp.choices[0].message['content'].trim(), coordinates, text, pronunciation, overlayId)
-      } else {
-        return {"error": `Error: translation is not valid: ${resp}`};
+      })
+      
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let chunks = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+        // Massage and parse the chunk of data
+        const chunk = decoder.decode(value);
+        console.log(chunk)
+        const lines = chunk.split("\n");
+        console.log(lines)
+        const parsedLines = lines
+          .map((line) => line.replace(/^data: /, "").trim()) // Remove the "data: " prefix
+          .filter((line) => line !== "" && line !== "[DONE]") // Remove empty lines and "[DONE]"
+          .map((line) => JSON.parse(line)); // Parse the JSON string
+        console.log(parsedLines)
+
+        for (const parsedLine of parsedLines) {
+          const { choices } = parsedLine;
+          const { delta } = choices[0];
+          const { content } = delta;
+          // Update the UI with the new content
+          if (content) {
+            chunks += content;
+            showTranslationDialog(chunks, coordinates, text, pronunciation, overlayId)
+          }
+        }
       }
     } catch (err) {
       return {"error": `Translation: ${err.message}`};
