@@ -61,7 +61,13 @@ var state = {
   userLimit: {
     requestCount: 0,
     limit: 0
-  }
+  },
+  // Add OpenAI API Key and API Calls Location to the state
+  openai_api_key: '',
+  api_calls_location: [
+    {id: 'Frontend', title: 'Frontend'},
+    {id: 'Backend', title: 'Backend'}
+  ]
 }
 
 // Set the state of the options page based on the current config
@@ -71,6 +77,10 @@ chrome.storage.sync.get((config) => {
   state.pronunciation.forEach((item) => item.checked = item.id === config.pronunciation)
   state.source_lang.forEach((item) => item.checked = item.id === config.source_lang)
   state.target_lang.forEach((item) => item.checked = item.id === config.target_lang)
+
+  // Get the OpenAI API Key and API Calls Location from the storage
+  state.openai_api_key = config.openai_api_key || '';
+  state.api_calls_location.forEach((item) => item.checked = item.id === config.api_calls_location);
   fetchUserLimit();
 
   m.redraw()
@@ -99,6 +109,11 @@ var events = {
       shortcut: 'chrome://extensions/shortcuts',
       location: 'chrome://settings/downloads',
     }[action]})
+  },
+  // Add event handlers for OpenAI API Key and API Calls Location
+  input: (name) => (event) => {
+    state[name] = event.target.value;
+    chrome.storage.sync.set({[name]: event.target.value});
   }
 }
 
@@ -127,7 +142,6 @@ m.mount(document.querySelector('main'), {
         'Update'
       )
     ),
-
     m('.bs-callout',
       m('h4.mdc-typography--headline5', 'API'),
       state.api.map((item) =>
@@ -147,7 +161,6 @@ m.mount(document.querySelector('main'), {
         )
       )
     ),
-
     m('.bs-callout',
       m('h4.mdc-typography--headline5', 'Capture Mode'),
       state.capture_mode.map((item) =>
@@ -172,7 +185,6 @@ m.mount(document.querySelector('main'), {
         )
       )
     ),
-
     m('.bs-callout',
       m('h4.mdc-typography--headline5', 'Pronunciation'),
       state.pronunciation.map((item) =>
@@ -192,7 +204,6 @@ m.mount(document.querySelector('main'), {
         )
       )
     ),
-
     m('.bs-callout',
       m('h4.mdc-typography--headline5', 'Translate From'),
       state.source_lang.map((item) =>
@@ -212,7 +223,6 @@ m.mount(document.querySelector('main'), {
         )
       )
     ),
-
     m('.bs-callout',
       m('h4.mdc-typography--headline5', 'Translate To'),
       state.target_lang.map((item) =>
@@ -222,6 +232,35 @@ m.mount(document.querySelector('main'), {
               type: 'radio', name: 'target_lang',
               checked: item.checked && 'checked',
               onchange: events.option('target_lang', item)
+            }),
+            m('.mdc-radio__background',
+              m('.mdc-radio__outer-circle'),
+              m('.mdc-radio__inner-circle'),
+            ),
+          ),
+          m('span', item.title)
+        )
+      )
+    ),
+    m('.bs-callout',
+      m('h4.mdc-typography--headline5', 'OpenAI API Key (Enter your own key and select Frontend as the API Calls Location for slightly faster GPT translations)'),
+      m('input.mdc-text-field__input', {
+        type: 'text',
+        id: 'openai_api_key',
+        value: state.openai_api_key,
+        oninput: events.input('openai_api_key')
+      })
+    ),
+    m('.bs-callout',
+      m('h4.mdc-typography--headline5', 'API Calls Location'),
+      state.api_calls_location.map((item) =>
+        m('label.s-label', {onupdate: onupdate(item)},
+          m('.mdc-radio',
+            m('input.mdc-radio__native-control', {
+              type: 'radio',
+              name: 'api_calls_location',
+              checked: item.checked && 'checked',
+              onchange: events.option('api_calls_location', item)
             }),
             m('.mdc-radio__background',
               m('.mdc-radio__outer-circle'),

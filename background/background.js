@@ -22,6 +22,10 @@ chrome.storage.sync.get((config) => {
     chrome.storage.sync.set({target_lang: 'English'})
   }
 
+  if (!config.api_calls_location) {
+    chrome.storage.sync.set({api_calls_location: 'Backend'})
+  }
+
   if (config.icon === undefined) {
     config.icon = false
     chrome.storage.sync.set({icon: false})
