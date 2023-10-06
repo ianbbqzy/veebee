@@ -362,6 +362,9 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
       #original${overlayID} {
         color: black;
       }
+      #dragButton${overlayID} {
+        cursor: move; /* Change cursor to move icon on hover */
+      }
       /* Add other styles here */
     </style>
     <!-- Overlay content -->
@@ -370,6 +373,7 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
       <button id="toggleButton${overlayID}" style="margin-right: 5px;">Toggle</button>
       <button id="overlay-minimize-button${overlayID}" style="margin-right: 5px;">–</button>
       <button id="overlay-close-button${overlayID}">OK</button>
+      <button id="dragButton${overlayID}" style="margin-right: 5px;">Drag</button>
     </div>
     <p id="translation${overlayID}">${translation}</p>
     <audio id="pronunciation${overlayID}" src="data:audio/mp3;base64,${pronunciation}" style="display: none;"></audio>
@@ -467,6 +471,38 @@ function attachEventListeners(overlayID, spawnRight, spawnX, pronunciation) {
       translationElement.style.display = isTranslationVisible ? "none" : "block";
       originalElement.style.display = isTranslationVisible ? "block" : "none";
   });
+
+  const dragButton = overlay.shadowRoot.querySelector(`#dragButton${overlayID}`);
+  let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+  dragButton.onmousedown = dragMouseDown;
+
+  function dragMouseDown(e) {
+    e = e || window.event;
+    // get the mouse cursor position at startup:
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+    document.onmouseup = closeDragElement;
+    // call a function whenever the cursor moves:
+    document.onmousemove = elementDrag;
+  }
+
+  function elementDrag(e) {
+    e = e || window.event;
+    // calculate the new cursor position:
+    pos1 = pos3 - e.clientX;
+    pos2 = pos4 - e.clientY;
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+    // set the element's new position:
+    overlay.style.top = (overlay.offsetTop - pos2) + "px";
+    overlay.style.left = (overlay.offsetLeft - pos1) + "px";
+  }
+
+  function closeDragElement() {
+    /* stop moving when mouse button is released:*/
+    document.onmouseup = null;
+    document.onmousemove = null;
+  }
 }
 
 function crop (image, area, done) {
