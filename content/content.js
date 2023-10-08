@@ -321,6 +321,7 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
       <button id="overlay-minimize-button${overlayID}" style="margin-right: 5px;">–</button>
       <button id="overlay-close-button${overlayID}">OK</button>
       <button id="dragButton${overlayID}" style="margin-right: 5px;">Drag</button>
+      <button id="openSidePanelButton${overlayID}">Open Side Panel</button>
     </div>
     <p id="translation${overlayID}">${translation}</p>
     <audio id="pronunciation${overlayID}" src="data:audio/mp3;base64,${pronunciation}" style="display: none;"></audio>
@@ -450,6 +451,14 @@ function attachEventListeners(overlayID, spawnRight, spawnX, pronunciation) {
     document.onmouseup = null;
     document.onmousemove = null;
   }
+
+  const openSidePanelButton = shadowRoot.getElementById("openSidePanelButton" + overlayID);
+
+  if (process.env.PAID_FEATURES === 'true') {
+    openSidePanelButton.addEventListener("click", openSidePanel);
+  } else {
+    openSidePanelButton.remove();
+  }
 }
 
 function crop (image, area, done) {
@@ -497,3 +506,56 @@ function findParentOverlay(elements) {
   const parent = Array.from(elements).find(element => element.shadowRoot.contains(node)) || null;
   return parent;
 }
+
+let sidePanel;
+let lastContent;
+
+function createSidePanel() {
+  sidePanel = document.createElement('div');
+  sidePanel.id = 'sidePanel';
+  sidePanel.style.display = 'none';
+  sidePanel.style.position = 'fixed';
+  sidePanel.style.right = '0';
+  sidePanel.style.top = '0';
+  sidePanel.style.width = '200px';
+  sidePanel.style.height = '100vh';
+  sidePanel.style.backgroundColor = '#f0f0f0';
+  sidePanel.style.zIndex = '1000';
+  sidePanel.style.padding = '10px';
+  sidePanel.style.boxShadow = '-2px 0 5px rgba(0,0,0,0.1)';
+  const controlsHTML = `
+  <div class="overlay-controls" style="right: 5px; display: flex;">
+      <button id="playButton2" style="margin-right: 5px;">Play Pronunciation</button>
+      <button id="toggleButton2" style="margin-right: 5px;">Toggle</button>
+      <button id="closeSidePanelButton">Close Side Panel</button>
+    </div>
+  <div id="contentContainer"></div>
+  `;
+  sidePanel.innerHTML = controlsHTML;
+  document.body.appendChild(sidePanel);
+  console.log(sidePanel.innerHTML);
+
+  const closeButton = sidePanel.querySelector("#closeSidePanelButton")
+  closeButton.innerText = 'Close Side Panel';
+  closeButton.addEventListener('click', closeSidePanel);
+}
+
+function openSidePanel() {
+  sidePanel.style.display = 'block';
+  if (localStorage.getItem('lastContent')) {
+    lastContent = localStorage.getItem('lastContent');
+    updateContent(lastContent);
+  }
+}
+
+function closeSidePanel() {
+  sidePanel.style.display = 'none';
+  localStorage.setItem('lastContent', lastContent);
+}
+
+function updateContent(content) {
+  const contentContainer = sidePanel.querySelector('#contentContainer');
+  contentContainer.innerHTML = content;
+}
+
+createSidePanel();
