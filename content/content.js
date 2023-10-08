@@ -451,8 +451,14 @@ function attachEventListeners(overlayID, spawnRight, spawnX, pronunciation) {
     document.onmouseup = null;
     document.onmousemove = null;
   }
+
   const openSidePanelButton = shadowRoot.getElementById("openSidePanelButton" + overlayID);
-  openSidePanelButton.addEventListener("click", openSidePanel);
+
+  if (process.env.PAID_FEATURES === 'true') {
+    openSidePanelButton.addEventListener("click", openSidePanel);
+  } else {
+    openSidePanelButton.remove();
+  }
 }
 
 function crop (image, area, done) {
@@ -517,24 +523,28 @@ function createSidePanel() {
   sidePanel.style.zIndex = '1000';
   sidePanel.style.padding = '10px';
   sidePanel.style.boxShadow = '-2px 0 5px rgba(0,0,0,0.1)';
+  const controlsHTML = `
+  <div class="overlay-controls" style="right: 5px; display: flex;">
+      <button id="playButton2" style="margin-right: 5px;">Play Pronunciation</button>
+      <button id="toggleButton2" style="margin-right: 5px;">Toggle</button>
+      <button id="closeSidePanelButton">Close Side Panel</button>
+    </div>
+  <div id="contentContainer"></div>
+  `;
+  sidePanel.innerHTML = controlsHTML;
   document.body.appendChild(sidePanel);
+  console.log(sidePanel.innerHTML);
 
-  const closeButton = document.createElement('button');
+  const closeButton = sidePanel.querySelector("#closeSidePanelButton")
   closeButton.innerText = 'Close Side Panel';
   closeButton.addEventListener('click', closeSidePanel);
-  sidePanel.appendChild(closeButton);
-
-  const minimizeButton = document.createElement('button');
-  minimizeButton.innerText = 'Minimize Side Panel';
-  minimizeButton.addEventListener('click', minimizeSidePanel); // assuming minimizeSidePanel is a defined function
-  sidePanel.appendChild(minimizeButton);
 }
 
 function openSidePanel() {
   sidePanel.style.display = 'block';
   if (localStorage.getItem('lastContent')) {
     lastContent = localStorage.getItem('lastContent');
-    sidePanel.innerHTML = lastContent;
+    updateContent(lastContent);
   }
 }
 
@@ -544,8 +554,8 @@ function closeSidePanel() {
 }
 
 function updateContent(content) {
-  lastContent = content;
-  sidePanel.innerHTML = content;
+  const contentContainer = sidePanel.querySelector('#contentContainer');
+  contentContainer.innerHTML = content;
 }
 
 createSidePanel();
