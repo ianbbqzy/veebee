@@ -316,12 +316,12 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
     </style>
     <!-- Overlay content -->
     <div class="overlay-controls" style="right: 5px; display: flex;">
-      <button id="playButton${overlayID}" style="margin-right: 5px;">Play Pronunciation</button>
-      <button id="toggleButton${overlayID}" style="margin-right: 5px;">Toggle</button>
-      <button id="overlay-minimize-button${overlayID}" style="margin-right: 5px;">–</button>
-      <button id="overlay-close-button${overlayID}">OK</button>
-      <button id="dragButton${overlayID}" style="margin-right: 5px;">Drag</button>
-      <button id="openSidePanelButton${overlayID}">Open Side Panel</button>
+      <button id="playButton${overlayID}" style="margin-right: 5px;" title="Play Pronunciation"><i class="material-icons">play_arrow</i></button>
+      <button id="toggleButton${overlayID}" style="margin-right: 5px;" title="Translate"><i class="material-icons">translate</i></button>
+      <button id="overlay-minimize-button${overlayID}" style="margin-right: 5px;" title="Minimize"><i class="material-icons">remove</i></button>
+      <button id="overlay-close-button${overlayID}" title="Close"><i class="material-icons">close</i></button>
+      <button id="dragButton${overlayID}" style="margin-right: 5px;" title="Drag"><i class="material-icons">open_with</i></button>
+      <button id="openSidePanelButton${overlayID}" title="Open Side Panel"><i class="material-icons">open_in_new</i></button>
     </div>
     <p id="translation${overlayID}">${translation}</p>
     <audio id="pronunciation${overlayID}" src="data:audio/mp3;base64,${pronunciation}" style="display: none;"></audio>
