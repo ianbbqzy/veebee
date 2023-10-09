@@ -202,7 +202,7 @@ var getTranslation = async (image, coordinates, api, idToken, source_lang, targe
               // Handle the error
               showTranslationDialog(response.translation+ `\n\n Failed to retrieve in-depth translation: ${result.value.error}`, coordinates, response.original, response.pronunciation, overlayId);
             } else {
-              showTranslationDialog(result.value, coordinates, response.original, response.pronunciation, overlayId);
+              updateTranslationDialog(result.value, overlayId);
             }
             result = await translationStream.next();
           }
@@ -283,15 +283,15 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
   const overlay = document.createElement('div');
   overlay.id = overlayID;
   overlay.attachShadow({mode: 'open'}); // Attach a shadow root to the overlay
-  
+
   // Apply styles to the shadow root
   overlay.shadowRoot.innerHTML = `
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
       :host {
         display: flex;
         flex-direction: column;
         background-color: white;
-        font-size: 16px;
         border: 1px solid #cccccc;
         width: 300px;
         position: absolute;
@@ -312,16 +312,22 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
       #dragButton${overlayID} {
         cursor: move; /* Change cursor to move icon on hover */
       }
-      /* Add other styles here */
+      .material-icons {
+        font-size: 18px
+      }
     </style>
     <!-- Overlay content -->
-    <div class="overlay-controls" style="right: 5px; display: flex;">
-      <button id="playButton${overlayID}" style="margin-right: 5px;">Play Pronunciation</button>
-      <button id="toggleButton${overlayID}" style="margin-right: 5px;">Toggle</button>
-      <button id="overlay-minimize-button${overlayID}" style="margin-right: 5px;">–</button>
-      <button id="overlay-close-button${overlayID}">OK</button>
-      <button id="dragButton${overlayID}" style="margin-right: 5px;">Drag</button>
-      <button id="openSidePanelButton${overlayID}">Open Side Panel</button>
+    <div class="overlay-controls" style="right: 5px; display: flex; justify-content: space-between;">
+      <div>
+        <button id="toggleButton${overlayID}" title="Show Original/Translation"><i class="material-icons">translate</i></button>
+        <button id="playButton${overlayID}" title="Play Pronunciation"><i class="material-icons">play_arrow</i></button>
+        <button id="openSidePanelButton${overlayID}" style="margin-right: 5px" title="Open Side Panel"><i class="material-icons">open_in_new</i></button>
+      </div>
+      <div>
+        <button id="dragButton${overlayID}" title="Drag"><i class="material-icons">open_with</i></button>
+        <button id="overlay-minimize-button${overlayID}" title="Minimize"><i class="material-icons">remove</i></button>
+        <button id="overlay-close-button${overlayID}" style="margin-right: 5px" title="Close"><i class="material-icons">close</i></button>
+      </div>
     </div>
     <p id="translation${overlayID}">${translation}</p>
     <audio id="pronunciation${overlayID}" src="data:audio/mp3;base64,${pronunciation}" style="display: none;"></audio>
@@ -350,6 +356,9 @@ function minimizeOverlay(overlayID, spawnRight, spawnX, pronunciation) {
       z-index: 998;
       left: ${spawnRight === false ? (spawnX + 270) + "px" : spawnX + "px"};
     }
+    .material-icons {
+      font-size: 15px
+    }
     #overlay-restore-button${overlayID} {
       background-color: red;
     }
@@ -360,12 +369,15 @@ function minimizeOverlay(overlayID, spawnRight, spawnX, pronunciation) {
 
   overlay.dataset.initialHtml = shadowRoot.innerHTML;
   shadowRoot.innerHTML = `
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     ${combinedStyles}
-    <button id="overlay-restore-button${overlayID}">+</button>
+    <button id="overlay-restore-button${overlayID}" title="Restore"><i class="material-icons">add</i></button>
   `;
+
   shadowRoot.querySelector("#overlay-restore-button" + overlayID).addEventListener("click", () => restoreOverlay(overlayID, spawnRight, spawnX, pronunciation));
 }
 
+// TODO: fix the issue where styles keep getting duplicated when restoring overlays
 function restoreOverlay(overlayID, spawnRight, spawnX, pronunciation) {
   const overlay = document.querySelector("#" + overlayID);
   const shadowRoot = overlay.shadowRoot;
@@ -396,10 +408,10 @@ function attachEventListeners(overlayID, spawnRight, spawnX, pronunciation) {
   const overlay = document.querySelector("#" + overlayID);
   const shadowRoot = overlay.shadowRoot;
 
-  const playButton = shadowRoot.querySelector("#playButton" + overlayID)
+  const playButton = shadowRoot.querySelector("#playButton" + overlayID);
   playButton.addEventListener("click", () => {
-      const audioElement = shadowRoot.querySelector("#pronunciation" + overlayID);
-      audioElement.play();
+    const audioElement = shadowRoot.querySelector("#pronunciation" + overlayID);
+    audioElement.play();
   });
   if (pronunciation) {
     playButton.disabled = false;
@@ -412,12 +424,12 @@ function attachEventListeners(overlayID, spawnRight, spawnX, pronunciation) {
 
   const toggleButton = shadowRoot.getElementById("toggleButton" + overlayID);
   toggleButton.addEventListener("click", function() {
-      const translationElement = shadowRoot.getElementById("translation" + overlayID);
-      const originalElement = shadowRoot.getElementById("original" + overlayID);
-      
-      const isTranslationVisible = translationElement.style.display !== "none";
-      translationElement.style.display = isTranslationVisible ? "none" : "block";
-      originalElement.style.display = isTranslationVisible ? "block" : "none";
+    const translationElement = shadowRoot.getElementById("translation" + overlayID);
+    const originalElement = shadowRoot.getElementById("original" + overlayID);
+    
+    const isTranslationVisible = translationElement.style.display !== "none";
+    translationElement.style.display = isTranslationVisible ? "none" : "block";
+    originalElement.style.display = isTranslationVisible ? "block" : "none";
   });
 
   const dragButton = overlay.shadowRoot.querySelector(`#dragButton${overlayID}`);
@@ -497,6 +509,21 @@ function crop (image, area, done) {
   img.src = image
 }
 
+function updateTranslationDialog(translation, overlayID) {
+  const overlay = document.querySelector("#" + overlayID);
+  if (overlay) {
+    const shadowRoot = overlay.shadowRoot;
+    const translationElement = shadowRoot.querySelector(`#translation${overlayID}`);
+    if (translationElement) {
+      translationElement.textContent = translation;
+    } else {
+      console.error(`Translation element not found in overlay ${overlayID}`);
+    }
+  } else {
+    console.error(`Overlay ${overlayID} not found`);
+  }
+}
+
 // elements is of type NodeListOf<Element>
 function findParentOverlay(elements) {
   const selection = window.getSelection();
@@ -525,8 +552,8 @@ function createSidePanel() {
   sidePanel.style.boxShadow = '-2px 0 5px rgba(0,0,0,0.1)';
   const controlsHTML = `
   <div class="overlay-controls" style="right: 5px; display: flex;">
-      <button id="playButton2" style="margin-right: 5px;">Play Pronunciation</button>
-      <button id="toggleButton2" style="margin-right: 5px;">Toggle</button>
+      <button id="playButton2">Play Pronunciation</button>
+      <button id="toggleButton2">Toggle</button>
       <button id="closeSidePanelButton">Close Side Panel</button>
     </div>
   <div id="contentContainer"></div>
@@ -559,3 +586,13 @@ function updateContent(content) {
 }
 
 createSidePanel();
+
+// Create link element for the webpage in addition to the shadow root
+let link = document.createElement('link');
+
+// Set link attributes
+link.href = 'https://fonts.googleapis.com/icon?family=Material+Icons';
+link.rel = 'stylesheet';
+
+// Append link to the head of the document
+document.head.appendChild(link);
