@@ -309,11 +309,29 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
       #original${overlayID} {
         color: black;
       }
-      #dragButton${overlayID} {
+      .overlay-controls {
         cursor: move; /* Change cursor to move icon on hover */
       }
       .material-icons {
         font-size: 18px
+      }
+      .minimized {
+        width: 30px;
+        #translation${overlayID}, #original${overlayID}, .overlay-controls {
+          display: none;
+        }
+        #overlay-restore-button${overlayID} {
+          display: block;
+        }
+      }
+      .restored {
+        width: 300px;
+        #translation${overlayID}, #original${overlayID}, .overlay-controls {
+          display: block;
+        }
+        #overlay-restore-button${overlayID} {
+          display: none;
+        }
       }
     </style>
     <!-- Overlay content -->
@@ -344,64 +362,14 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
 
 function minimizeOverlay(overlayID, spawnRight, spawnX, pronunciation) {
   const overlay = document.querySelector("#" + overlayID);
-  const shadowRoot = overlay.shadowRoot;
-
-  // Extract the <style> tag from the original HTML
-  const styleTag = shadowRoot.querySelector('style').outerHTML;
-
-  // Create new style rules
-  const newStyles = `
-    :host {
-      width: 30px;
-      z-index: 998;
-      left: ${spawnRight === false ? (spawnX + 270) + "px" : spawnX + "px"};
-    }
-    .material-icons {
-      font-size: 15px
-    }
-    #overlay-restore-button${overlayID} {
-      background-color: red;
-    }
-  `;
-
-  // Combine the original styles with the new styles
-  const combinedStyles = styleTag.replace('</style>', `${newStyles}</style>`);
-
-  overlay.dataset.initialHtml = shadowRoot.innerHTML;
-  shadowRoot.innerHTML = `
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    ${combinedStyles}
-    <button id="overlay-restore-button${overlayID}" title="Restore"><i class="material-icons">add</i></button>
-  `;
-
-  shadowRoot.querySelector("#overlay-restore-button" + overlayID).addEventListener("click", () => restoreOverlay(overlayID, spawnRight, spawnX, pronunciation));
+  overlay.classList.add('minimized');
+  overlay.classList.remove('restored');
 }
 
-// TODO: fix the issue where styles keep getting duplicated when restoring overlays
 function restoreOverlay(overlayID, spawnRight, spawnX, pronunciation) {
   const overlay = document.querySelector("#" + overlayID);
-  const shadowRoot = overlay.shadowRoot;
-
-  // Extract the <style> tag from the original HTML
-  const styleTag = shadowRoot.querySelector('style');
-
-  // Create new style rules
-  const newStyles = `
-    :host {
-      width: 300px;
-      height: auto;
-      z-index: 999;
-      left: ${spawnX}px;
-    }
-  `;
-
-  // Combine the original styles with the new styles
-  const combinedStyles = styleTag.textContent + newStyles;
-
-  shadowRoot.innerHTML = overlay.dataset.initialHtml;
-  shadowRoot.querySelector('style').textContent = combinedStyles;
-
-  attachEventListeners(overlayID, spawnRight, spawnX, pronunciation);
+  overlay.classList.add('restored');
+  overlay.classList.remove('minimized');
 }
 
 function attachEventListeners(overlayID, spawnRight, spawnX, pronunciation) {
@@ -432,7 +400,7 @@ function attachEventListeners(overlayID, spawnRight, spawnX, pronunciation) {
     originalElement.style.display = isTranslationVisible ? "block" : "none";
   });
 
-  const dragButton = overlay.shadowRoot.querySelector(`#dragButton${overlayID}`);
+  const dragButton = overlay.shadowRoot.querySelector(`.overlay-controls`);
   let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
   dragButton.onmousedown = dragMouseDown;
 
