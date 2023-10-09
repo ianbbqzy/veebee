@@ -272,7 +272,6 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
   const spawnRight = rectCenterX <= viewportCenterX;
 
   let existingOverlay = document.querySelector("#" + overlayID)
-  console.log("overlayID: " + overlayID)
   const existingIsMinimized = existingOverlay && existingOverlay.shadowRoot.querySelector(`#translation${overlayID}`) === null;
   minimize = existingOverlay ? existingIsMinimized : minimize;
   existingOverlay = existingOverlay || document.querySelector("#translatingOverlay");
@@ -365,9 +364,8 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
 }
 
 // TODO: doesn't work after drag. always minimizes to the left
+// Minimize when text spawned to the left
 function minimizeOverlayLeft(overlayID) {
-  console.log(overlayID)
-
   const overlay = document.querySelector("#" + overlayID);
   const shadowRoot = overlay.shadowRoot;
   const currentLeftPosition = parseInt(overlay.style.getPropertyValue('--left-position'));
@@ -379,6 +377,7 @@ function minimizeOverlayLeft(overlayID) {
   shadowRoot.querySelector("#overlay-restore-button" + overlayID).style.display = "block";
 }
 
+// Minimize when text spawned to the right
 function minimizeOverlayRight(overlayID) {
   const overlay = document.querySelector("#" + overlayID);
   const shadowRoot = overlay.shadowRoot;
@@ -391,7 +390,20 @@ function minimizeOverlayRight(overlayID) {
   shadowRoot.querySelector("#overlay-restore-button" + overlayID).style.display = "block";
 }
 
-function restoreOverlay(overlayID) {
+// Restore when text spawned to the left
+function restoreOverlayLeft(overlayID) {
+  const overlay = document.querySelector("#" + overlayID);
+  const shadowRoot = overlay.shadowRoot;
+  shadowRoot.querySelectorAll(".restored").forEach(element => element.style.display = "flex");
+  shadowRoot.querySelector("#overlay-restore-button" + overlayID).style.display = "none";
+  const currentLeftPosition = parseInt(overlay.style.getPropertyValue('--left-position'));
+  overlay.style.setProperty('--left-position', `${currentLeftPosition - 270}px`);
+  overlay.style.setProperty('--width', "300px");
+  overlay.style.setProperty('--z-index', "999");
+}
+
+// Restore when text spawned to the right
+function restoreOverlayRight(overlayID) {
   const overlay = document.querySelector("#" + overlayID);
   const shadowRoot = overlay.shadowRoot;
   shadowRoot.querySelectorAll(".restored").forEach(element => element.style.display = "flex");
@@ -418,7 +430,7 @@ function attachEventListeners(overlayID, spawnRight, pronunciation) {
   }
 
   shadowRoot.querySelector("#overlay-minimize-button" + overlayID).addEventListener("click", () => spawnRight === true ? minimizeOverlayRight(overlayID) : minimizeOverlayLeft(overlayID));
-  shadowRoot.querySelector("#overlay-restore-button" + overlayID).addEventListener("click", () => restoreOverlay(overlayID));
+  shadowRoot.querySelector("#overlay-restore-button" + overlayID).addEventListener("click", () => spawnRight === true ? restoreOverlayRight(overlayID) : restoreOverlayLeft(overlayID));
   shadowRoot.querySelector("#overlay-close-button" + overlayID).addEventListener("click", () => overlay.remove());
 
   const toggleButton = shadowRoot.getElementById("toggleButton" + overlayID);
@@ -559,7 +571,6 @@ function createSidePanel() {
   `;
   sidePanel.innerHTML = controlsHTML;
   document.body.appendChild(sidePanel);
-  console.log(sidePanel.innerHTML);
 
   const closeButton = sidePanel.querySelector("#closeSidePanelButton")
   closeButton.innerText = 'Close Side Panel';
