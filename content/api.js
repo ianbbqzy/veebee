@@ -81,7 +81,7 @@ export async function callTranslateWithText(text, source_lang, target_lang, api,
           method: 'POST',
           headers: headers,
           body: JSON.stringify({
-            'model': 'gpt-3.5-turbo',
+            'model': 'gpt-3.5-turbo-0613',
             'messages': [
               {'role': 'system', 'content': `
   You are a robotic translator who has mastered all languages. You provide the translation and breakdown
@@ -176,7 +176,7 @@ export async function* callTranslateWithTextStream(text, source_lang, target_lan
         method: 'POST',
         headers: headers,
         body: JSON.stringify({
-          'model': 'gpt-3.5-turbo',
+          'model': 'gpt-3.5-turbo-0613',
           'stream': true,
           'messages': [
             {'role': 'system', 'content': `
