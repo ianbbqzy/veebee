@@ -361,8 +361,9 @@ function minimizeOverlay(overlayID, spawnRight, spawnX, pronunciation) {
   overlay.dataset.initialHtml = shadowRoot.innerHTML;
   shadowRoot.innerHTML = `
     ${combinedStyles}
-    <button id="overlay-restore-button${overlayID}">+</button>
+    <button id="overlay-restore-button${overlayID}" title="Restore"><i class="material-icons">add</i></button>
   `;
+
   shadowRoot.querySelector("#overlay-restore-button" + overlayID).addEventListener("click", () => restoreOverlay(overlayID, spawnRight, spawnX, pronunciation));
 }
 
