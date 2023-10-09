@@ -202,7 +202,7 @@ var getTranslation = async (image, coordinates, api, idToken, source_lang, targe
               // Handle the error
               showTranslationDialog(response.translation+ `\n\n Failed to retrieve in-depth translation: ${result.value.error}`, coordinates, response.original, response.pronunciation, overlayId);
             } else {
-              showTranslationDialog(result.value, coordinates, response.original, response.pronunciation, overlayId);
+              updateTranslationDialog(result.value, overlayId);
             }
             result = await translationStream.next();
           }
@@ -283,9 +283,10 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
   const overlay = document.createElement('div');
   overlay.id = overlayID;
   overlay.attachShadow({mode: 'open'}); // Attach a shadow root to the overlay
-  
+
   // Apply styles to the shadow root
   overlay.shadowRoot.innerHTML = `
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
       :host {
         display: flex;
@@ -366,6 +367,7 @@ function minimizeOverlay(overlayID, spawnRight, spawnX, pronunciation) {
   shadowRoot.querySelector("#overlay-restore-button" + overlayID).addEventListener("click", () => restoreOverlay(overlayID, spawnRight, spawnX, pronunciation));
 }
 
+// TODO: fix the issue where styles keep getting duplicated when restoring overlays
 function restoreOverlay(overlayID, spawnRight, spawnX, pronunciation) {
   const overlay = document.querySelector("#" + overlayID);
   const shadowRoot = overlay.shadowRoot;
@@ -497,6 +499,21 @@ function crop (image, area, done) {
   img.src = image
 }
 
+function updateTranslationDialog(translation, overlayID) {
+  const overlay = document.querySelector("#" + overlayID);
+  if (overlay) {
+    const shadowRoot = overlay.shadowRoot;
+    const translationElement = shadowRoot.querySelector(`#translation${overlayID}`);
+    if (translationElement) {
+      translationElement.textContent = translation;
+    } else {
+      console.error(`Translation element not found in overlay ${overlayID}`);
+    }
+  } else {
+    console.error(`Overlay ${overlayID} not found`);
+  }
+}
+
 // elements is of type NodeListOf<Element>
 function findParentOverlay(elements) {
   const selection = window.getSelection();
@@ -559,3 +576,13 @@ function updateContent(content) {
 }
 
 createSidePanel();
+
+// Create link element for the webpage in addition to the shadow root
+let link = document.createElement('link');
+
+// Set link attributes
+link.href = 'https://fonts.googleapis.com/icon?family=Material+Icons';
+link.rel = 'stylesheet';
+
+// Append link to the head of the document
+document.head.appendChild(link);
