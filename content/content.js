@@ -161,7 +161,7 @@ var getTranslations = async (image, coordinates, api, idToken, source_lang, targ
               if (secondResponse.error) {
                 showTranslationDialog(translation.translation + `\n\n Failed to retrieve in-depth translation: ${secondResponse.error}`, ith_coordinates, translation.original, translation.pronunciation, individualOverlayId)
               } else if (secondResponse.translation) {
-                showTranslationDialog(secondResponse.translation, ith_coordinates, translation.original, translation.pronunciation, individualOverlayId)
+                updateTranslationDialog(secondResponse.translation, individualOverlayId)
               } else {
                 showTranslationDialog(translation.translation + "\n\n Failed to retrieve in-depth translation: translation is not found in the response", ith_coordinates, translation.original, translation.pronunciation, individualOverlayId)
               }
@@ -194,6 +194,7 @@ var getTranslation = async (image, coordinates, api, idToken, source_lang, targe
       showTranslationDialog(`Error: translation is not valid: ${response.error}`, coordinates, "", undefined, overlayId)
     } else if (response.translation) {
       if (api === "gpt") {
+        showTranslationDialog(response.translation + "\n\n retrieving in-depth translation", coordinates, response.original, response.pronunciation, overlayId)
         const translationStream = callTranslateWithTextStream(response.original, source_lang, target_lang, idToken, response.pronunciation, overlayId, coordinates, api);
         (async () => {
           let result = await translationStream.next();
@@ -269,9 +270,6 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
   const viewportCenterX = (viewportWidth / 2) + window.scrollX;
   const rectCenterX = (coordinates.x + coordinates.x2) / 2;
   const spawnRight = rectCenterX <= viewportCenterX;
-  const spawnX = spawnRight
-      ? coordinates.x2 + window.scrollX
-      : coordinates.x - 300 + window.scrollX;
 
   let existingOverlay = document.querySelector("#" + overlayID)
   console.log("overlayID: " + overlayID)
@@ -284,95 +282,127 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
   overlay.id = overlayID;
   overlay.attachShadow({mode: 'open'}); // Attach a shadow root to the overlay
 
-  // Apply styles to the shadow root
-  overlay.shadowRoot.innerHTML = `
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <style>
-      :host {
-        display: flex;
-        flex-direction: column;
-        background-color: white;
-        border: 1px solid #cccccc;
-        width: 300px;
-        position: absolute;
-        top: ${coordinates.y + window.scrollY}px;
-        left: ${spawnX}px;
-        z-index: 999;
-      }
-      #translation${overlayID} {
-        flex-grow: 1;
-        overflow: auto;
-        top: 10px;
-        color: black;
-        white-space: pre-line; /* Add this line to preserve line breaks */
-      }
-      #original${overlayID} {
-        color: black;
-      }
-      .overlay-controls {
-        cursor: move; /* Change cursor to move icon on hover */
-      }
-      .material-icons {
-        font-size: 18px
-      }
-      .minimized {
-        width: 30px;
-        #translation${overlayID}, #original${overlayID}, .overlay-controls {
-          display: none;
+  // Calculate the left position
+  const leftPosition = spawnRight ? coordinates.x2 + window.scrollX : coordinates.x - 300 + window.scrollX;
+
+  // Fetch the Material Icons stylesheet
+  fetch('https://fonts.googleapis.com/icon?family=Material+Icons')
+  .then(response => response.text())
+  .then(css => {
+    const overlay = document.createElement('div');
+    overlay.id = overlayID;
+    overlay.attachShadow({mode: 'open'}); // Attach a shadow root to the overlay
+
+    // Apply styles to the shadow root
+    overlay.shadowRoot.innerHTML = `
+      <style>
+      ${css} /* Insert the Material Icons stylesheet here */
+
+        :host {
+          display: flex;
+          flex-direction: column;
+          background-color: white;
+          border: 1px solid #cccccc;
+          width: var(--width); /* Use CSS variable */
+          position: absolute;
+          top: ${coordinates.y + window.scrollY}px;
+          left: var(--left-position); /* Use CSS variable */
+          z-index: var(--z-index); /* Use CSS variable */
+        }
+        #translation${overlayID} {
+          flex-grow: 1;
+          overflow: auto;
+          top: 10px;
+          color: black;
+          white-space: pre-line; /* Add this line to preserve line breaks */
+        }
+        #original${overlayID} {
+          color: black;
+        }
+        #dragButton${overlayID} {
+          cursor: move; /* Change cursor to move icon on hover */
+        }
+        .material-icons {
+          font-size: 18px
         }
         #overlay-restore-button${overlayID} {
-          display: block;
+          background-color: red;
         }
-      }
-      .restored {
-        width: 300px;
-        #translation${overlayID}, #original${overlayID}, .overlay-controls {
-          display: block;
-        }
-        #overlay-restore-button${overlayID} {
-          display: none;
-        }
-      }
-    </style>
-    <!-- Overlay content -->
-    <div class="overlay-controls" style="right: 5px; display: flex; justify-content: space-between;">
-      <div>
-        <button id="toggleButton${overlayID}" title="Show Original/Translation"><i class="material-icons">translate</i></button>
-        <button id="playButton${overlayID}" title="Play Pronunciation"><i class="material-icons">play_arrow</i></button>
-        <button id="openSidePanelButton${overlayID}" style="margin-right: 5px" title="Open Side Panel"><i class="material-icons">open_in_new</i></button>
+      </style>
+      <!-- Overlay content -->
+      <button id="overlay-restore-button${overlayID}" title="Restore" style="display: none;">+</button>
+      <div class="overlay-controls restored" style="right: 5px; display: flex; justify-content: space-between;">
+        <div>
+          <button id="toggleButton${overlayID}" title="Show Original/Translation"><i class="material-icons">translate</i></button>
+          <button id="playButton${overlayID}" title="Play Pronunciation"><i class="material-icons">play_arrow</i></button>
+          <button id="openSidePanelButton${overlayID}" style="margin-right: 5px" title="Open Side Panel"><i class="material-icons">open_in_new</i></button>
+        </div>
+        <div>
+          <button id="dragButton${overlayID}" title="Drag"><i class="material-icons">open_with</i></button>
+          <button id="overlay-minimize-button${overlayID}" title="Minimize"><i class="material-icons">remove</i></button>
+          <button id="overlay-close-button${overlayID}" title="Close"><i class="material-icons">close</i></button>
+        </div>
       </div>
-      <div>
-        <button id="dragButton${overlayID}" title="Drag"><i class="material-icons">open_with</i></button>
-        <button id="overlay-minimize-button${overlayID}" title="Minimize"><i class="material-icons">remove</i></button>
-        <button id="overlay-close-button${overlayID}" style="margin-right: 5px" title="Close"><i class="material-icons">close</i></button>
-      </div>
-    </div>
-    <p id="translation${overlayID}">${translation}</p>
-    <audio id="pronunciation${overlayID}" src="data:audio/mp3;base64,${pronunciation}" style="display: none;"></audio>
-    <p id="original${overlayID}" contentEditable="true" style="display: none;">${original}</p>
-  `;
-  
-  // Append the overlay to the document body
-  document.body.appendChild(overlay);
-  attachEventListeners(overlayID, spawnRight, spawnX, pronunciation);
-  if (minimize) {
-    minimizeOverlay(overlayID, spawnRight, spawnX, pronunciation)
-  }
+      <p id="translation${overlayID}" class="restored">${translation}</p>
+      <audio id="pronunciation${overlayID}" src="data:audio/mp3;base64,${pronunciation}" style="display: none;"></audio>
+      <p id="original${overlayID}" contentEditable="true" style="display: none;">${original}</p>
+    `;
+    overlay.style.setProperty('--left-position', `${leftPosition}px`);  
+    overlay.style.setProperty('--width', `300px`);
+    overlay.style.setProperty('--z-index', `999`);
+
+    // Append the overlay to the document body
+    document.body.appendChild(overlay);
+    attachEventListeners(overlayID, spawnRight, pronunciation);
+    if (minimize) {
+      if (spawnRight) {
+        minimizeOverlayRight(overlayID)
+      } else {
+        minimizeOverlayLeft(overlayID)
+      }
+    }
+  });
 }
 
-function minimizeOverlay(overlayID, spawnRight, spawnX, pronunciation) {
+// TODO: doesn't work after drag. always minimizes to the left
+function minimizeOverlayLeft(overlayID) {
+  console.log(overlayID)
+
   const overlay = document.querySelector("#" + overlayID);
-  overlay.classList.add('minimized');
-  overlay.classList.remove('restored');
+  const shadowRoot = overlay.shadowRoot;
+  const currentLeftPosition = parseInt(overlay.style.getPropertyValue('--left-position'));
+  overlay.style.setProperty('--left-position', (currentLeftPosition + 270) + "px");
+  overlay.style.setProperty('--width', "30px");
+  overlay.style.setProperty('--z-index', "998");
+
+  shadowRoot.querySelectorAll(".restored").forEach(element => element.style.display = "none");
+  shadowRoot.querySelector("#overlay-restore-button" + overlayID).style.display = "block";
 }
 
-function restoreOverlay(overlayID, spawnRight, spawnX, pronunciation) {
+function minimizeOverlayRight(overlayID) {
   const overlay = document.querySelector("#" + overlayID);
-  overlay.classList.add('restored');
-  overlay.classList.remove('minimized');
+  const shadowRoot = overlay.shadowRoot;
+  const currentLeftPosition = parseInt(overlay.style.getPropertyValue('--left-position'));
+  overlay.style.setProperty('--left-position', currentLeftPosition + "px");
+  overlay.style.setProperty('--width', "30px");
+  overlay.style.setProperty('--z-index', "998");
+
+  shadowRoot.querySelectorAll(".restored").forEach(element => element.style.display = "none");
+  shadowRoot.querySelector("#overlay-restore-button" + overlayID).style.display = "block";
 }
 
-function attachEventListeners(overlayID, spawnRight, spawnX, pronunciation) {
+function restoreOverlay(overlayID) {
+  const overlay = document.querySelector("#" + overlayID);
+  const shadowRoot = overlay.shadowRoot;
+  shadowRoot.querySelectorAll(".restored").forEach(element => element.style.display = "flex");
+  shadowRoot.querySelector("#overlay-restore-button" + overlayID).style.display = "none";
+  const currentLeftPosition = parseInt(overlay.style.getPropertyValue('--left-position'));
+  overlay.style.setProperty('--left-position', `${currentLeftPosition}px`);
+  overlay.style.setProperty('--width', "300px");
+  overlay.style.setProperty('--z-index', "999");
+}
+
+function attachEventListeners(overlayID, spawnRight, pronunciation) {
   const overlay = document.querySelector("#" + overlayID);
   const shadowRoot = overlay.shadowRoot;
 
@@ -387,7 +417,8 @@ function attachEventListeners(overlayID, spawnRight, spawnX, pronunciation) {
     playButton.disabled = true;
   }
 
-  shadowRoot.querySelector("#overlay-minimize-button" + overlayID).addEventListener("click", () => minimizeOverlay(overlayID, spawnRight, spawnX, pronunciation));
+  shadowRoot.querySelector("#overlay-minimize-button" + overlayID).addEventListener("click", () => spawnRight === true ? minimizeOverlayRight(overlayID) : minimizeOverlayLeft(overlayID));
+  shadowRoot.querySelector("#overlay-restore-button" + overlayID).addEventListener("click", () => restoreOverlay(overlayID));
   shadowRoot.querySelector("#overlay-close-button" + overlayID).addEventListener("click", () => overlay.remove());
 
   const toggleButton = shadowRoot.getElementById("toggleButton" + overlayID);
@@ -400,7 +431,7 @@ function attachEventListeners(overlayID, spawnRight, spawnX, pronunciation) {
     originalElement.style.display = isTranslationVisible ? "block" : "none";
   });
 
-  const dragButton = overlay.shadowRoot.querySelector(`.overlay-controls`);
+  const dragButton = overlay.shadowRoot.querySelector(`#dragButton${overlayID}`);
   let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
   dragButton.onmousedown = dragMouseDown;
 
