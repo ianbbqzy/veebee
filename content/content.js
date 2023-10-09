@@ -396,10 +396,10 @@ function attachEventListeners(overlayID, spawnRight, spawnX, pronunciation) {
   const overlay = document.querySelector("#" + overlayID);
   const shadowRoot = overlay.shadowRoot;
 
-  const playButton = shadowRoot.querySelector("#playButton" + overlayID)
+  const playButton = shadowRoot.querySelector("#playButton" + overlayID);
   playButton.addEventListener("click", () => {
-      const audioElement = shadowRoot.querySelector("#pronunciation" + overlayID);
-      audioElement.play();
+    const audioElement = shadowRoot.querySelector("#pronunciation" + overlayID);
+    audioElement.play();
   });
   if (pronunciation) {
     playButton.disabled = false;
@@ -412,12 +412,12 @@ function attachEventListeners(overlayID, spawnRight, spawnX, pronunciation) {
 
   const toggleButton = shadowRoot.getElementById("toggleButton" + overlayID);
   toggleButton.addEventListener("click", function() {
-      const translationElement = shadowRoot.getElementById("translation" + overlayID);
-      const originalElement = shadowRoot.getElementById("original" + overlayID);
-      
-      const isTranslationVisible = translationElement.style.display !== "none";
-      translationElement.style.display = isTranslationVisible ? "none" : "block";
-      originalElement.style.display = isTranslationVisible ? "block" : "none";
+    const translationElement = shadowRoot.getElementById("translation" + overlayID);
+    const originalElement = shadowRoot.getElementById("original" + overlayID);
+    
+    const isTranslationVisible = translationElement.style.display !== "none";
+    translationElement.style.display = isTranslationVisible ? "none" : "block";
+    originalElement.style.display = isTranslationVisible ? "block" : "none";
   });
 
   const dragButton = overlay.shadowRoot.querySelector(`#dragButton${overlayID}`);
