@@ -379,6 +379,8 @@ function minimizeOverlayLeft(overlayID) {
 
 // Minimize when text spawned to the right
 function minimizeOverlayRight(overlayID) {
+  console.log("minimizeRight")
+
   const overlay = document.querySelector("#" + overlayID);
   const shadowRoot = overlay.shadowRoot;
   const currentLeftPosition = parseInt(overlay.style.getPropertyValue('--left-position'));
@@ -415,6 +417,7 @@ function restoreOverlayRight(overlayID) {
 }
 
 function attachEventListeners(overlayID, spawnRight, pronunciation) {
+  console.log(spawnRight)
   const overlay = document.querySelector("#" + overlayID);
   const shadowRoot = overlay.shadowRoot;
 
