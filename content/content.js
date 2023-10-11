@@ -303,7 +303,8 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
           background-color: white;
           border: 1px solid #cccccc;
           width: var(--width); /* Use CSS variable */
-          height: 500px; /* Set the height of the Translation Dialog to 500px */
+          height: auto; /* Set the height of the Translation Dialog to auto */
+          max-height: 500px; /* Set the max-height of the Translation Dialog to 500px */
           position: absolute;
           top: ${coordinates.y + window.scrollY}px;
           left: var(--left-position); /* Use CSS variable */
