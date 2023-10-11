@@ -5,6 +5,7 @@ import 'dotenv/config'
 import { callTranslateWithScreenshot, callTranslateWithText, callTranslateAllWithScreenshot, callTranslateWithTextStream } from './api.js';
 
 let jcrop, selection;
+let previousOverlayId = null;
 
 // Handles messages
 // currently we only expect messages from the background script.
@@ -591,8 +592,19 @@ function createSidePanel() {
   closeButton.addEventListener('click', closeSidePanel);
 }
 
-function openSidePanel() {
+function openSidePanel(overlayID) {
   sidePanel.style.display = 'block';
+  if (previousOverlayId && previousOverlayId !== overlayID) {
+    handleReversion(previousOverlayId);
+  }
+  previousOverlayId = overlayID;
+  const overlay = document.querySelector("#" + overlayID);
+  const shadowRoot = overlay.shadowRoot;
+  const openSidePanelButton = shadowRoot.getElementById("openSidePanelButton" + overlayID);
+  const restoreButton = shadowRoot.getElementById("overlay-restore-button" + overlayID);
+  openSidePanelButton.disabled = true;
+  restoreButton.style.backgroundColor = 'teal';
+  openSidePanelButton.style.backgroundColor = 'teal';
   if (localStorage.getItem('lastContent')) {
     lastContent = localStorage.getItem('lastContent');
     updateContent(lastContent);
