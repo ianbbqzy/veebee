@@ -7,6 +7,18 @@ import { callTranslateWithScreenshot, callTranslateWithText, callTranslateAllWit
 let jcrop, selection;
 let previousOverlayId = null;
 
+// Add this function at the top of the file
+function initializeJcrop() {
+  if (!jcrop) {
+    console.log("jcrop not initialized")
+    // create fake image, then init jcrop, then call overlay() and capture()
+    image(() => init(() => {
+      jcropOverlay(true)
+      capture()
+    }))
+  }
+}
+
 // Handles messages
 // currently we only expect messages from the background script.
 chrome.runtime.onMessage.addListener((req, sender, res) => {
@@ -16,23 +28,9 @@ chrome.runtime.onMessage.addListener((req, sender, res) => {
 
   console.log(req.message);
   if (req.message === 'initCrop') {
-    // If jcrop is not initialized, initialize it.
-    // TODO: maybe we can initialize this on page load?
-    if (!jcrop) {
-      console.log("jcrop not initialized")
-      // create fake image, then init jcrop, then call overlay() and capture()
-      image(() => init(() => {
-        jcropOverlay(true)
-        capture()
-      }))
-    }
-    else {
-      // jcrop already initialized. In this case, if there is already a cropping
-      // session, ends it. If not, starts one. so we call overlay() to toggle
-      // the active state.
-      jcropOverlay()
-      capture()
-    }
+    initializeJcrop();
+    jcropOverlay()
+    capture()
   } else if (req.message === "screenCapture") {
     selection = {
       x: 0,
@@ -638,3 +636,6 @@ link.rel = 'stylesheet';
 
 // Append link to the head of the document
 document.head.appendChild(link);
+
+// Add this at the end of the file to call the function when the page loads
+window.addEventListener('load', initializeJcrop);
