@@ -303,7 +303,8 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
           background-color: white;
           border: 1px solid #cccccc;
           width: var(--width); /* Use CSS variable */
-          height: 500px; /* Set the height of the Translation Dialog to 500px */
+          height: auto; /* Set the height of the Translation Dialog to auto */
+          max-height: 500px; /* Set the max-height of the Translation Dialog to 500px */
           position: absolute;
           top: ${coordinates.y + window.scrollY}px;
           left: var(--left-position); /* Use CSS variable */
@@ -315,18 +316,6 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
         #translation${overlayID} {
           overflow-y: auto; /* Make the content area scrollable */
           max-height: 450px; /* Set the maximum height of the content area to be 450px (500px - 50px) */
-        }
-        #original${overlayID} {
-          color: black;
-        }
-        #dragButton${overlayID} {
-          cursor: move; /* Change cursor to move icon on hover */
-        }
-        .material-icons {
-          font-size: 18px
-        }
-        #overlay-restore-button${overlayID} {
-          background-color: red;
         }
       </style>
       <!-- Overlay content -->
