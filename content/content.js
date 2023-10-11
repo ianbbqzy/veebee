@@ -295,25 +295,29 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
     // Apply styles to the shadow root
     overlay.shadowRoot.innerHTML = `
       <style>
-      ${css} /* Insert the Material Icons stylesheet here */
-
+        ${css} /* Insert the Material Icons stylesheet here */
         :host {
           display: flex;
           flex-direction: column;
           background-color: white;
           border: 1px solid #cccccc;
-          width: var(--width); /* Use CSS variable */
+          width: var(--width);
+          height: auto;
+          max-height: 480px;
           position: absolute;
           top: ${coordinates.y + window.scrollY}px;
-          left: var(--left-position); /* Use CSS variable */
-          z-index: var(--z-index); /* Use CSS variable */
+          left: var(--left-position);
+          z-index: var(--z-index);
+        }
+        .overlay-controls {
+          height: 30px;
         }
         #translation${overlayID} {
-          flex-grow: 1;
-          overflow: auto;
-          top: 10px;
+          overflow-y: auto; /* Make the content area scrollable */
+          max-height: 450px;
+          height: auto; /* Add this line to allow the content area to shrink in height when the content is less than full */
           color: black;
-          white-space: pre-line; /* Add this line to preserve line breaks */
+          white-space: pre-line;
         }
         #original${overlayID} {
           color: black;
