@@ -12,7 +12,7 @@ from services.ocr_service import OCRService
 from services.translation_service import TranslationService
 from services.audio_service import AudioService  # Add import for the new service
 import os
-from comic_text_detector.inference import model2annotations
+from comic_text_detector.inference import model2annotations, TextDetector
 
 load_dotenv()
 hard_limit = 1000
@@ -67,6 +67,10 @@ users_service = UsersService(hard_limit=hard_limit)
 ocr_service = OCRService()
 translation_serivce = TranslationService(os.getenv("OPENAI_API_KEY"), os.getenv("DEEPL_API_KEY"))
 audio_service = AudioService()  # Initialize the new service
+
+device = 'cpu'
+model_path = r'comic_text_detector/data/comictextdetector.pt.onnx'
+textDetector = TextDetector(model_path=model_path, input_size=1024, device=device, act='leaky')
 
 @app.route("/translate-text", methods=["POST"])
 @authenticate
@@ -143,8 +147,6 @@ def translate_img_all(user_id):
     scroll_x = request.json.get('scrollX')
     scroll_y = request.json.get('scrollY')
     coordinates = request.json.get('coordinates')
-
-    model_path = r'comic_text_detector/data/comictextdetector.pt.onnx'
     
     api = request.args.get('api')
     # Determine the function to call based on the api URL params
@@ -156,7 +158,7 @@ def translate_img_all(user_id):
         return jsonify({"error": "Invalid API"}), 400
 
     try:
-        ocr_results = ocr_service.annotate_multiple_images(image_data_url, [coordinates['w'], coordinates['h']], model2annotations(model_path, image_data_url, save_json=False), source_lang)
+        ocr_results = ocr_service.annotate_multiple_images(image_data_url, [coordinates['w'], coordinates['h']], model2annotations(textDetector, image_data_url, save_json=False), source_lang)
     except Exception as e:
         return jsonify({"error": str(e)}), 500  # Updated error response code
 

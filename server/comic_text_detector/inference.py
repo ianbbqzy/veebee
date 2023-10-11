@@ -146,9 +146,8 @@ class TextDetector:
 
         return blk_list
 
-def model2annotations(model_path, image_data_url, save_json=False):
-    device = 'cpu'
-    model = TextDetector(model_path=model_path, input_size=1024, device=device, act='leaky')  
+def model2annotations(textDetector, image_data_url, save_json=False):
+    model = textDetector 
 
     image = Image.open(io.BytesIO(base64.b64decode(image_data_url.split(',')[1])))
     img = np.array(image)
