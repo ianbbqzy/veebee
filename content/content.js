@@ -480,12 +480,22 @@ function attachEventListeners(overlayID, spawnRight, pronunciation) {
   }
 
   const openSidePanelButton = shadowRoot.getElementById("openSidePanelButton" + overlayID);
+  openSidePanelButton.addEventListener("click", function() {
+    openSidePanel(overlayID);
+    updateContent(translation, original, pronunciation);
+    const minimizeButton = shadowRoot.getElementById("overlay-minimize-button" + overlayID);
+    minimizeButton.click();
+  });
+}
 
-  if (process.env.PAID_FEATURES === 'true') {
-    openSidePanelButton.addEventListener("click", openSidePanel);
-  } else {
-    openSidePanelButton.remove();
-  }
+function handleReversion(overlayID) {
+  const overlay = document.querySelector("#" + overlayID);
+  const shadowRoot = overlay.shadowRoot;
+  const openSidePanelButton = shadowRoot.getElementById("openSidePanelButton" + overlayID);
+  const restoreButton = shadowRoot.getElementById("overlay-restore-button" + overlayID);
+  openSidePanelButton.disabled = false;
+  restoreButton.style.backgroundColor = 'red';
+  openSidePanelButton.style.backgroundColor = '';
 }
 
 function crop (image, area, done) {
