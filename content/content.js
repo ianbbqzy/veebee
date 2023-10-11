@@ -616,9 +616,15 @@ function closeSidePanel() {
   localStorage.setItem('lastContent', lastContent);
 }
 
-function updateContent(content) {
+function updateContent(translation, original, pronunciation) {
   const contentContainer = sidePanel.querySelector('#contentContainer');
-  contentContainer.innerHTML = content;
+  contentContainer.innerHTML = `
+    <p>Original: ${original}</p>
+    <p>Translation: ${translation}</p>
+    <audio controls>
+      <source src="data:audio/mp3;base64,${pronunciation}" type="audio/mpeg">
+    </audio>
+  `;
 }
 
 createSidePanel();
