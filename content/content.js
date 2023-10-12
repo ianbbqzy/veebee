@@ -5,6 +5,28 @@ import 'dotenv/config'
 import { callTranslateWithScreenshot, callTranslateWithText, callTranslateAllWithScreenshot, callTranslateWithTextStream } from './api.js';
 
 let jcrop, selection;
+let previousOverlayId = null;
+
+// Create link element for the webpage in addition to the shadow root of translation dialogs/side panels
+let link = document.createElement('link');
+
+// Set link attributes
+link.href = 'https://fonts.googleapis.com/icon?family=Material+Icons';
+link.rel = 'stylesheet';
+
+// Append link to the head of the document
+document.head.appendChild(link);
+// Add this function at the top of the file
+function initializeJcrop() {
+  if (!jcrop) {
+    console.log("jcrop not initialized")
+    // create fake image, then init jcrop, then call overlay() and capture()
+    image(() => init(() => {
+      jcropOverlay(true)
+      capture()
+    }))
+  }
+}
 
 // Handles messages
 // currently we only expect messages from the background script.
@@ -15,23 +37,9 @@ chrome.runtime.onMessage.addListener((req, sender, res) => {
 
   console.log(req.message);
   if (req.message === 'initCrop') {
-    // If jcrop is not initialized, initialize it.
-    // TODO: maybe we can initialize this on page load?
-    if (!jcrop) {
-      console.log("jcrop not initialized")
-      // create fake image, then init jcrop, then call overlay() and capture()
-      image(() => init(() => {
-        jcropOverlay(true)
-        capture()
-      }))
-    }
-    else {
-      // jcrop already initialized. In this case, if there is already a cropping
-      // session, ends it. If not, starts one. so we call overlay() to toggle
-      // the active state.
-      jcropOverlay()
-      capture()
-    }
+    initializeJcrop();
+    jcropOverlay()
+    capture()
   } else if (req.message === "screenCapture") {
     selection = {
       x: 0,
@@ -161,7 +169,8 @@ var getTranslations = async (image, coordinates, api, idToken, source_lang, targ
               if (secondResponse.error) {
                 showTranslationDialog(translation.translation + `\n\n Failed to retrieve in-depth translation: ${secondResponse.error}`, ith_coordinates, translation.original, translation.pronunciation, individualOverlayId)
               } else if (secondResponse.translation) {
-                updateTranslationDialog(secondResponse.translation, individualOverlayId)
+                // update Button immediately because it's not streaming
+                updateTranslationDialog(secondResponse.translation, individualOverlayId, translation.original, translation.pronunciation, true)
               } else {
                 showTranslationDialog(translation.translation + "\n\n Failed to retrieve in-depth translation: translation is not found in the response", ith_coordinates, translation.original, translation.pronunciation, individualOverlayId)
               }
@@ -203,10 +212,12 @@ var getTranslation = async (image, coordinates, api, idToken, source_lang, targe
               // Handle the error
               showTranslationDialog(response.translation+ `\n\n Failed to retrieve in-depth translation: ${result.value.error}`, coordinates, response.original, response.pronunciation, overlayId);
             } else {
-              updateTranslationDialog(result.value, overlayId);
+              // do not update Button immediately because it's still streaming
+              updateTranslationDialog(result.value, overlayId, response.original, response.pronunciation, false);
             }
             result = await translationStream.next();
           }
+          updateTranslationDialog(result.value, overlayId, response.original, response.pronunciation, true);
         })().catch(error => {
           showTranslationDialog(response.translation+ `\n\n Failed to retrieve in-depth translation: ${error}`, coordinates, response.original, response.pronunciation, overlayId);
         });
@@ -265,6 +276,15 @@ function showTextTranslationDialog(translation, pronunciation, overlayId) {
   }
 }
 
+let materialIconsCss = ""
+
+fetch('https://fonts.googleapis.com/icon?family=Material+Icons')
+  .then(response => response.text())
+  .then(css => {
+    materialIconsCss = css;
+    createSidePanel();
+  });
+
 function showTranslationDialog(translation, coordinates, original, pronunciation, overlayID = 'overlay', minimize = false) {
   const viewportWidth = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
   const viewportCenterX = (viewportWidth / 2) + window.scrollX;
@@ -279,92 +299,82 @@ function showTranslationDialog(translation, coordinates, original, pronunciation
 
   const overlay = document.createElement('div');
   overlay.id = overlayID;
-  overlay.attachShadow({mode: 'open'}); // Attach a shadow root to the overlay
-
+  overlay.attachShadow({mode: 'open'}); // Attach a shadow root to the overlay 
   // Calculate the left position
   const leftPosition = spawnRight ? coordinates.x2 + window.scrollX : coordinates.x - 300 + window.scrollX;
 
-  // Fetch the Material Icons stylesheet
-  fetch('https://fonts.googleapis.com/icon?family=Material+Icons')
-  .then(response => response.text())
-  .then(css => {
-    const overlay = document.createElement('div');
-    overlay.id = overlayID;
-    overlay.attachShadow({mode: 'open'}); // Attach a shadow root to the overlay
-
-    // Apply styles to the shadow root
-    overlay.shadowRoot.innerHTML = `
-      <style>
-        ${css} /* Insert the Material Icons stylesheet here */
-        :host {
-          display: flex;
-          flex-direction: column;
-          background-color: white;
-          border: 1px solid #cccccc;
-          width: var(--width);
-          height: auto;
-          max-height: 480px;
-          position: absolute;
-          top: ${coordinates.y + window.scrollY}px;
-          left: var(--left-position);
-          z-index: var(--z-index);
-        }
-        .overlay-controls {
-          height: 30px;
-        }
-        #translation${overlayID} {
-          overflow-y: auto; /* Make the content area scrollable */
-          max-height: 450px;
-          height: auto; /* Add this line to allow the content area to shrink in height when the content is less than full */
-          color: black;
-          white-space: pre-line;
-        }
-        #original${overlayID} {
-          color: black;
-        }
-        #dragButton${overlayID} {
-          cursor: move; /* Change cursor to move icon on hover */
-        }
-        .material-icons {
-          font-size: 18px
-        }
-        #overlay-restore-button${overlayID} {
-          background-color: red;
-        }
-      </style>
-      <!-- Overlay content -->
-      <button id="overlay-restore-button${overlayID}" title="Restore" style="display: none;">+</button>
-      <div class="overlay-controls restored" style="right: 5px; display: flex; justify-content: space-between;">
-        <div>
-          <button id="toggleButton${overlayID}" title="Show Original/Translation"><i class="material-icons">translate</i></button>
-          <button id="playButton${overlayID}" title="Play Pronunciation"><i class="material-icons">play_arrow</i></button>
-          <button id="openSidePanelButton${overlayID}" style="margin-right: 5px" title="Open Side Panel"><i class="material-icons">open_in_new</i></button>
-        </div>
-        <div>
-          <button id="dragButton${overlayID}" title="Drag"><i class="material-icons">open_with</i></button>
-          <button id="overlay-minimize-button${overlayID}" title="Minimize"><i class="material-icons">remove</i></button>
-          <button id="overlay-close-button${overlayID}" title="Close"><i class="material-icons">close</i></button>
-        </div>
-      </div>
-      <p id="translation${overlayID}" class="restored">${translation}</p>
-      <audio id="pronunciation${overlayID}" src="data:audio/mp3;base64,${pronunciation}" style="display: none;"></audio>
-      <p id="original${overlayID}" contentEditable="true" style="display: none;">${original}</p>
-    `;
-    overlay.style.setProperty('--left-position', `${leftPosition}px`);  
-    overlay.style.setProperty('--width', `300px`);
-    overlay.style.setProperty('--z-index', `999`);
-
-    // Append the overlay to the document body
-    document.body.appendChild(overlay);
-    attachEventListeners(overlayID, spawnRight, pronunciation);
-    if (minimize) {
-      if (spawnRight) {
-        minimizeOverlayRight(overlayID)
-      } else {
-        minimizeOverlayLeft(overlayID)
+  // Apply styles to the shadow root
+  overlay.shadowRoot.innerHTML = `
+    <style>
+      ${materialIconsCss} /* Insert the Material Icons stylesheet here */
+      :host {
+        display: flex;
+        flex-direction: column;
+        background-color: white;
+        border: 1px solid #cccccc;
+        width: var(--width);
+        height: auto;
+        max-height: 480px;
+        position: absolute;
+        top: ${coordinates.y + window.scrollY}px;
+        left: var(--left-position);
+        z-index: var(--z-index);
       }
+      .overlay-controls {
+        height: 30px;
+      }
+      #translation${overlayID} {
+        overflow-y: auto; /* Make the content area scrollable */
+        max-height: 450px;
+        height: auto; /* Add this line to allow the content area to shrink in height when the content is less than full */
+        color: black;
+        white-space: pre-line;
+      }
+      #original${overlayID} {
+        color: black;
+      }
+      #dragButton${overlayID} {
+        cursor: move; /* Change cursor to move icon on hover */
+      }
+      .material-icons {
+        font-size: 18px
+      }
+      #overlay-restore-button${overlayID} {
+        background-color: red;
+      }
+    </style>
+    <!-- Overlay content -->
+    <button id="overlay-restore-button${overlayID}" title="Restore" style="display: none;">+</button>
+    <div class="overlay-controls restored" style="right: 5px; display: flex; justify-content: space-between;">
+      <div>
+        <button id="toggleButton${overlayID}" title="Show Original/Translation"><i class="material-icons">translate</i></button>
+        <button id="playButton${overlayID}" title="Play Pronunciation"><i class="material-icons">play_arrow</i></button>
+        <button id="openSidePanelButton${overlayID}" style="margin-right: 5px" title="Open Side Panel"><i class="material-icons">open_in_new</i></button>
+      </div>
+      <div>
+        <button id="dragButton${overlayID}" title="Drag"><i class="material-icons">open_with</i></button>
+        <button id="overlay-minimize-button${overlayID}" title="Minimize"><i class="material-icons">remove</i></button>
+        <button id="overlay-close-button${overlayID}" title="Close"><i class="material-icons">close</i></button>
+      </div>
+    </div>
+    <p id="translation${overlayID}" class="restored">${translation}</p>
+    <audio id="pronunciation${overlayID}" src="data:audio/mp3;base64,${pronunciation}" style="display: none;"></audio>
+    <p id="original${overlayID}" contentEditable="true" style="display: none;">${original}</p>
+  `;
+  overlay.style.setProperty('--left-position', `${leftPosition}px`);  
+  overlay.style.setProperty('--width', `300px`);
+  overlay.style.setProperty('--z-index', `999`);
+
+  // Append the overlay to the document body
+  document.body.appendChild(overlay);
+  attachEventListeners(overlayID, spawnRight, pronunciation, translation, original);
+  if (minimize) {
+    if (spawnRight) {
+      minimizeOverlayRight(overlayID)
+    } else {
+      minimizeOverlayLeft(overlayID)
     }
-  });
+  }
 }
 
 // TODO: doesn't work after drag. always minimizes to the left
@@ -418,7 +428,7 @@ function restoreOverlayRight(overlayID) {
   overlay.style.setProperty('--z-index', "999");
 }
 
-function attachEventListeners(overlayID, spawnRight, pronunciation) {
+function attachEventListeners(overlayID, spawnRight, pronunciation, translation, original) {
   const overlay = document.querySelector("#" + overlayID);
   const shadowRoot = overlay.shadowRoot;
 
@@ -480,12 +490,22 @@ function attachEventListeners(overlayID, spawnRight, pronunciation) {
   }
 
   const openSidePanelButton = shadowRoot.getElementById("openSidePanelButton" + overlayID);
+  openSidePanelButton.addEventListener("click", function() {
+    openSidePanel(overlayID);
+    updateContent(translation, original, pronunciation);
+    const minimizeButton = shadowRoot.getElementById("overlay-minimize-button" + overlayID);
+    minimizeButton.click();
+  });
+}
 
-  if (process.env.PAID_FEATURES === 'true') {
-    openSidePanelButton.addEventListener("click", openSidePanel);
-  } else {
-    openSidePanelButton.remove();
-  }
+function handleReversion(overlayID) {
+  const overlay = document.querySelector("#" + overlayID);
+  const shadowRoot = overlay.shadowRoot;
+  const openSidePanelButton = shadowRoot.getElementById("openSidePanelButton" + overlayID);
+  const restoreButton = shadowRoot.getElementById("overlay-restore-button" + overlayID);
+  openSidePanelButton.disabled = false;
+  restoreButton.style.backgroundColor = 'red';
+  openSidePanelButton.style.backgroundColor = '';
 }
 
 function crop (image, area, done) {
@@ -524,13 +544,25 @@ function crop (image, area, done) {
   img.src = image
 }
 
-function updateTranslationDialog(translation, overlayID) {
+function updateTranslationDialog(translation, overlayID, original, pronunciation, updateButton = false) {
   const overlay = document.querySelector("#" + overlayID);
   if (overlay) {
     const shadowRoot = overlay.shadowRoot;
     const translationElement = shadowRoot.querySelector(`#translation${overlayID}`);
     if (translationElement) {
       translationElement.textContent = translation;
+
+      if (updateButton) {
+        const old_element = shadowRoot.getElementById("openSidePanelButton" + overlayID);
+        const new_element = old_element.cloneNode(true);
+        old_element.parentNode.replaceChild(new_element, old_element);
+        new_element.addEventListener("click", function() {
+          openSidePanel(overlayID);
+          updateContent(translation, original, pronunciation);
+          const minimizeButton = shadowRoot.getElementById("overlay-minimize-button" + overlayID);
+          minimizeButton.click();
+        });
+      }
     } else {
       console.error(`Translation element not found in overlay ${overlayID}`);
     }
@@ -549,64 +581,113 @@ function findParentOverlay(elements) {
   return parent;
 }
 
-let sidePanel;
-let lastContent;
-
 function createSidePanel() {
-  sidePanel = document.createElement('div');
-  sidePanel.id = 'sidePanel';
-  sidePanel.style.display = 'none';
-  sidePanel.style.position = 'fixed';
-  sidePanel.style.right = '0';
-  sidePanel.style.top = '0';
-  sidePanel.style.width = '200px';
-  sidePanel.style.height = '100vh';
-  sidePanel.style.backgroundColor = '#f0f0f0';
-  sidePanel.style.zIndex = '1000';
-  sidePanel.style.padding = '10px';
-  sidePanel.style.boxShadow = '-2px 0 5px rgba(0,0,0,0.1)';
+  console.log("creating")
+  const sidePanel = document.createElement('div');
+  sidePanel.id = 'veebeeSidePanel';
+  sidePanel.attachShadow({mode: 'open'}); // Attach a shadow root to the overlay
+
   const controlsHTML = `
-  <div class="overlay-controls" style="right: 5px; display: flex;">
-      <button id="playButton2">Play Pronunciation</button>
-      <button id="toggleButton2">Toggle</button>
-      <button id="closeSidePanelButton">Close Side Panel</button>
+  <style>
+    ${materialIconsCss}
+    :host {
+      display: none;
+      flex-direction: column;
+      position: fixed;
+      right: 0;
+      top: 0;
+      width: 200px;
+      height: 100vh;
+      background-color: #f0f0f0;
+      z-index: 1000;
+      padding: 10px;
+      box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+    }
+    .overlay-controls {
+      height: 30px;
+    }
+    #translationSidePanel {
+      overflow-y: auto;
+      color: black;
+      white-space: pre-line;
+    }
+    #originalSidePanel {
+      color: black;
+    }
+    .material-icons {
+      font-size: 18px
+    }
+  </style>
+  <div class="overlay-controls" style="right: 5px; display: flex; justify-content: space-between;">
+    <div>
+      <button id="toggleButtonSidePanel" title="Show Original/Translation"><i class="material-icons">translate</i></button>
+      <button id="playButtonSidePanel" title="Play Pronunciation"><i class="material-icons">play_arrow</i></button>
     </div>
+    <div>
+      <button id="closeSidePanelButton" title="Close"><i class="material-icons">close</i></button>
+    </div>
+  </div>
   <div id="contentContainer"></div>
   `;
-  sidePanel.innerHTML = controlsHTML;
+  const shadowRoot = sidePanel.shadowRoot;
+  shadowRoot.innerHTML = controlsHTML;
   document.body.appendChild(sidePanel);
 
-  const closeButton = sidePanel.querySelector("#closeSidePanelButton")
-  closeButton.innerText = 'Close Side Panel';
+  const closeButton = sidePanel.shadowRoot.querySelector("#closeSidePanelButton")
   closeButton.addEventListener('click', closeSidePanel);
+
+  const toggleButton = shadowRoot.getElementById("toggleButtonSidePanel");
+  toggleButton.addEventListener("click", function() {
+    const translationElement = shadowRoot.getElementById("translationSidePanel");
+    const originalElement = shadowRoot.getElementById("originalSidePanel");
+    
+    const isTranslationVisible = translationElement.style.display !== "none";
+    translationElement.style.display = isTranslationVisible ? "none" : "block";
+    originalElement.style.display = isTranslationVisible ? "block" : "none";
+  });
 }
 
-function openSidePanel() {
-  sidePanel.style.display = 'block';
-  if (localStorage.getItem('lastContent')) {
-    lastContent = localStorage.getItem('lastContent');
-    updateContent(lastContent);
+function openSidePanel(overlayID) {
+  const sidePanel = document.querySelector("#veebeeSidePanel");
+  sidePanel.style.display = 'flex';
+  if (previousOverlayId && previousOverlayId !== overlayID) {
+    console.log(previousOverlayId);
+    handleReversion(previousOverlayId);
   }
+  previousOverlayId = overlayID;
+  const overlay = document.querySelector("#" + overlayID);
+  const shadowRoot = overlay.shadowRoot;
+  const openSidePanelButton = shadowRoot.getElementById("openSidePanelButton" + overlayID);
+  const restoreButton = shadowRoot.getElementById("overlay-restore-button" + overlayID);
+  openSidePanelButton.disabled = true;
+  restoreButton.style.backgroundColor = 'teal';
+  openSidePanelButton.style.backgroundColor = 'teal';
 }
 
 function closeSidePanel() {
+  const sidePanel = document.querySelector("#veebeeSidePanel");
   sidePanel.style.display = 'none';
-  localStorage.setItem('lastContent', lastContent);
+  handleReversion(previousOverlayId);
 }
 
-function updateContent(content) {
-  const contentContainer = sidePanel.querySelector('#contentContainer');
-  contentContainer.innerHTML = content;
+function updateContent(translation, original, pronunciation) {
+  const sidePanel = document.querySelector("#veebeeSidePanel");
+  const shadowRoot = sidePanel.shadowRoot;
+  const contentContainer = shadowRoot.querySelector('#contentContainer');
+  contentContainer.innerHTML = `
+    <p id="translationSidePanel" class="restored">${translation}</p>
+    <audio id="pronunciationSidePanel" src="data:audio/mp3;base64,${pronunciation}" style="display: none;"></audio>
+    <p id="originalSidePanel" contentEditable="true" style="display: none;">${original}</p>
+  `;
+
+  const playButton = shadowRoot.querySelector("#playButtonSidePanel");
+  playButton.addEventListener("click", () => {
+    const audioElement = shadowRoot.querySelector("#pronunciationSidePanel");
+    audioElement.play();
+  });
+  if (pronunciation) {
+    playButton.disabled = false;
+  } else {
+    playButton.disabled = true;
+  }
 }
-
-createSidePanel();
-
-// Create link element for the webpage in addition to the shadow root
-let link = document.createElement('link');
-
-// Set link attributes
-link.href = 'https://fonts.googleapis.com/icon?family=Material+Icons';
-link.rel = 'stylesheet';
-
-// Append link to the head of the document
-document.head.appendChild(link);
