@@ -126,14 +126,25 @@ var onupdate = (item) => (vnode) => {
 m.mount(document.querySelector('main'), {
   view: () => [
     m('.bs-callout',
-      m('h4.mdc-typography--headline5', 'Requests made this month / Your monthly request limit'),
-      m('p', `${state.userLimit.requestCount} / ${state.userLimit.limit}`)
+      m('h2.mdc-typography--headline5', 'Requests made / Monthly request limit'),
+      m('p', `${state.userLimit.requestCount} / ${state.userLimit.limit}`),
+      m('p', [
+        'Please consider donating on ',
+        m('a', {href: 'https://www.patreon.com/MangaReader276', target: '_blank'}, 'Patreon'),
+        ' to help with the server costs! Send me a message with your email to get additional quota!'
+      ]),
     ),
-
     m('.bs-callout',
-      m('h4.mdc-typography--headline5', 'Keyboard Shortcut'),
+      m('p', [
+        'Join the ',
+        m('a', {href: 'http://discord.veebee.fun', target: '_blank'}, 'Discord'),
+        '!'
+      ]),
+    ),
+    m('.bs-callout',
+      m('h2.mdc-typography--headline5', 'Keyboard Shortcut'),
       state.shortcut &&
-      m('p', 'You can use this keyboard shortcut instead of clicking the extension icon to start cropping. Refresh the page after updating the shortcut to see the changes.', m('code', state.shortcut)),
+      m('p', 'You can use this keyboard shortcut instead of clicking the extension icon to start cropping. If you update the shortcut, refresh this page to see the changes.', m('code', state.shortcut)),
       !state.shortcut &&
       m('p', 'No keyboard shortcut set'),
       m('button.mdc-button mdc-button--raised s-button', {
@@ -143,7 +154,7 @@ m.mount(document.querySelector('main'), {
       )
     ),
     m('.bs-callout',
-      m('h4.mdc-typography--headline5', 'API'),
+      m('h2.mdc-typography--headline5', 'API'),
       state.api.map((item) =>
         m('label.s-label', {onupdate: onupdate(item)},
           m('.mdc-radio',
@@ -162,7 +173,7 @@ m.mount(document.querySelector('main'), {
       )
     ),
     m('.bs-callout',
-      m('h4.mdc-typography--headline5', 'Capture Mode'),
+      m('h2.mdc-typography--headline5', 'Capture Mode'),
       state.capture_mode.map((item) =>
         m('label.s-label', {onupdate: onupdate(item)},
           m('.mdc-radio',
@@ -186,7 +197,7 @@ m.mount(document.querySelector('main'), {
       )
     ),
     m('.bs-callout',
-      m('h4.mdc-typography--headline5', 'Pronunciation'),
+      m('h2.mdc-typography--headline5', 'Pronunciation'),
       state.pronunciation.map((item) =>
         m('label.s-label', {onupdate: onupdate(item)},
           m('.mdc-radio',
@@ -205,7 +216,7 @@ m.mount(document.querySelector('main'), {
       )
     ),
     m('.bs-callout',
-      m('h4.mdc-typography--headline5', 'Translate From'),
+      m('h2.mdc-typography--headline5', 'Translate From'),
       state.source_lang.map((item) =>
         m('label.s-label', {onupdate: onupdate(item)},
           m('.mdc-radio',
@@ -224,7 +235,7 @@ m.mount(document.querySelector('main'), {
       )
     ),
     m('.bs-callout',
-      m('h4.mdc-typography--headline5', 'Translate To'),
+      m('h2.mdc-typography--headline5', 'Translate To'),
       state.target_lang.map((item) =>
         m('label.s-label', {onupdate: onupdate(item)},
           m('.mdc-radio',
@@ -243,16 +254,17 @@ m.mount(document.querySelector('main'), {
       )
     ),
     m('.bs-callout',
-      m('h4.mdc-typography--headline5', 'OpenAI API Key (Enter your own key and select Frontend as the API Calls Location for slightly faster GPT translations)'),
+      m('h2.mdc-typography--headline5', 'OpenAI API Key'),
       m('input.mdc-text-field__input', {
         type: 'text',
         id: 'openai_api_key',
         value: state.openai_api_key,
         oninput: events.input('openai_api_key')
-      })
+      }),
+      m('p', 'Enter your own key and select Frontend as the API Calls Location for slightly faster GPT translations')
     ),
     m('.bs-callout',
-      m('h4.mdc-typography--headline5', 'API Calls Location'),
+      m('h2.mdc-typography--headline5', 'API Calls Location'),
       state.api_calls_location.map((item) =>
         m('label.s-label', {onupdate: onupdate(item)},
           m('.mdc-radio',
@@ -278,7 +290,7 @@ function fetchUserLimit() {
   if (process.env.SEND_AUTH === 'true') {
     chrome.storage.sync.get(['idToken'], function(result) {
       const idToken = result.idToken;
-      fetch('http://localhost:3000/get-user-limit', {
+      fetch(`${process.env.BACKEND_URL}/get-user-limit`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${idToken}`
