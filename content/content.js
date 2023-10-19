@@ -203,7 +203,8 @@ var getTranslation = async (image, coordinates, api, idToken, source_lang, targe
       showTranslationDialog(`Error: translation is not valid: ${response.error}`, coordinates, "", undefined, overlayId)
     } else if (response.translation) {
       if (api === "gpt") {
-        showTranslationDialog(response.translation + "\n\n retrieving in-depth translation", coordinates, response.original, response.pronunciation, overlayId)
+        showTranslationDialog(response.translation + "\n\n retrieving in-depth translation", coordinates, response.original, response.pronunciation, overlayId);
+        let streamResult = "";
         const translationStream = callTranslateWithTextStream(response.original, source_lang, target_lang, idToken, response.pronunciation, overlayId, coordinates, api);
         (async () => {
           let result = await translationStream.next();
@@ -212,12 +213,13 @@ var getTranslation = async (image, coordinates, api, idToken, source_lang, targe
               // Handle the error
               showTranslationDialog(response.translation+ `\n\n Failed to retrieve in-depth translation: ${result.value.error}`, coordinates, response.original, response.pronunciation, overlayId);
             } else {
+              streamResult += result.value
               // do not update Button immediately because it's still streaming
-              updateTranslationDialog(result.value, overlayId, response.original, response.pronunciation, false);
+              updateTranslationDialog(streamResult, overlayId, response.original, response.pronunciation, false);
             }
             result = await translationStream.next();
           }
-          updateTranslationDialog(result.value, overlayId, response.original, response.pronunciation, true);
+          updateTranslationDialog(streamResult, overlayId, response.original, response.pronunciation, true);
         })().catch(error => {
           showTranslationDialog(response.translation+ `\n\n Failed to retrieve in-depth translation: ${error}`, coordinates, response.original, response.pronunciation, overlayId);
         });

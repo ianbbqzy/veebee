@@ -214,7 +214,6 @@ Breakdown:
       
       const reader = response.body.getReader();
       const decoder = new TextDecoder("utf-8");
-      let chunks = '';
 
       while (true) {
         const { done, value } = await reader.read();
@@ -233,11 +232,8 @@ Breakdown:
           const { choices } = parsedLine;
           const { delta } = choices[0];
           const { content } = delta;
-          // Update the UI with the new content
           if (content) {
-            chunks += content;
-            yield chunks
-            // showTranslationDialog(chunks, coordinates, text, pronunciation, overlayId)
+            yield content
           }
         }
       }
@@ -264,18 +260,13 @@ Breakdown:
       }
 
       const reader = response.body.getReader();
-      let chunks = '';
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
           break;
         }
-        chunks += new TextDecoder("utf-8").decode(value);
-        // Here you can process the chunk of translation
-        // For example, you can update the translation dialog with the new chunk
-        yield chunks
-        // showTranslationDialog(chunks, coordinates, text, pronunciation, overlayId)
+        yield new TextDecoder("utf-8").decode(value);
       }
     } catch (err) {
       return {"error": `Translation: ${err.message}`};
