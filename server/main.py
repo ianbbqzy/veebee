@@ -79,7 +79,7 @@ def translate_text(user_id):
     target_lang = request.args.get('target_lang', 'English')  # Added target_lang argument
     request_count, limit = users_service.get_request_count(user_id)
     if request_count > limit:
-        return jsonify({"error": f"You have exceeded your monthly request limit: {str(limit)}"}), 403
+        return jsonify({"error": f"You have exceeded your monthly request limit: {str(limit)}. Please consider donating at https://www.patreon.com/MangaReader276 to help with the server costs and get additional quota!"}), 403
     users_service.increment_request_count(user_id)
     text = request.json.get('text')
     if source_lang not in ["Japanese", "Korean", "Chinese"]:
@@ -108,7 +108,7 @@ def translate_img(user_id):
     target_lang = request.args.get('target_lang', 'English')  # Added target_lang argument
     request_count, limit = users_service.get_request_count(user_id)
     if request_count > limit:
-        return jsonify({"error": f"You have exceeded your monthly request limit: {str(limit)}"}), 403
+        return jsonify({"error": f"You have exceeded your monthly request limit: {str(limit)}. Please consider donating at https://www.patreon.com/MangaReader276 to help with the server costs and get additional quota!"}), 403
     users_service.increment_request_count(user_id)
     image_data_url = request.json.get('imageDataUrl')
     if source_lang not in ["Japanese", "Korean", "Chinese"]:
@@ -141,8 +141,7 @@ def translate_img_all(user_id):
     target_lang = request.args.get('target_lang', 'English')  # Added target_lang argument
     request_count, limit = users_service.get_request_count(user_id)
     if request_count > limit:
-        return jsonify({"error": f"You have exceeded your monthly request limit: {str(limit)}"}), 403
-    users_service.increment_request_count(user_id)
+        return jsonify({"error": f"You have exceeded your monthly request limit: {str(limit)}. Please consider donating at https://www.patreon.com/MangaReader276 to help with the server costs and get additional quota!"}), 403
     image_data_url = request.json.get('imageDataUrl')
     scroll_x = request.json.get('scrollX')
     scroll_y = request.json.get('scrollY')
@@ -175,6 +174,7 @@ def translate_img_all(user_id):
                 results.append(result)
             except Exception as e:
                 return jsonify({"error": str(e)}), 500  # Updated error response code
+    users_service.increment_request_count(user_id, len(results))
 
     return jsonify({'translations': results, "coordinates": coordinates, "scroll_x": scroll_x, "scroll_y": scroll_y})  # Modified return
 

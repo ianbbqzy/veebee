@@ -8,7 +8,7 @@ class UsersService:
         self.hard_limit = hard_limit
 
     # Function to increment request count for a user
-    def increment_request_count(self, user_id):
+    def increment_request_count(self, user_id, increase_by=1):
         # Get current month and year
         current_month = datetime.datetime.now().strftime("%Y-%m")
         
@@ -17,7 +17,7 @@ class UsersService:
         
         # Increment the request count document
         doc_ref = self.db.document(doc_path)
-        doc_ref.set({"count": firestore.Increment(1)}, merge=True)
+        doc_ref.set({"count": firestore.Increment(increase_by)}, merge=True)
 
     # Function to store request data in Firestore
     def store_request_data(self, user_id, text, translation, type, api):
