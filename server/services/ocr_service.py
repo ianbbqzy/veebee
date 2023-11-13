@@ -7,9 +7,11 @@ from manga_ocr import MangaOcr
 from google.cloud import vision
 
 class OCRService:
-    def __init__(self):
-        self.mocr = MangaOcr(pretrained_model_name_or_path='./model')
-        print("using mocr!!!!!!!!!!!")
+    def __init__(self, is_japanese=False):
+        self.mocr = None
+        if is_japanese:
+            self.mocr = MangaOcr(pretrained_model_name_or_path='./model')
+            print("using mocr!!!!!!!!!!!")
 
         self.client = vision.ImageAnnotatorClient()
 

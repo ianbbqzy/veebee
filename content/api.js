@@ -7,7 +7,7 @@ export async function callTranslateWithScreenshot(image, source_lang, target_lan
     headers.append('Content-Type', `application/json`);
   
     try {
-      const response = await fetch(url + '/translate-img?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
+      const response = await fetch(url + ('/lang/' + source_lang) + '/translate-img?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
         method: 'POST',
         headers: headers,
         body: JSON.stringify({
@@ -38,7 +38,7 @@ export  async function callTranslateAllWithScreenshot(image, source_lang, target
     headers.append('Content-Type', `application/json`);
 
     try {
-        const response = await fetch(url + '/translate-img-all?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
+        const response = await fetch(url + ('/lang/' + source_lang) + '/translate-img-all?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
         method: 'POST',
         headers: headers,
         body: JSON.stringify({
@@ -132,7 +132,7 @@ export async function callTranslateWithText(text, source_lang, target_lang, api,
       headers.append('Authorization', `Bearer ${idToken}`);
       headers.append('Content-Type', `application/json`);
       try {
-        const response = await fetch(url + '/translate-text?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
+        const response = await fetch(url + ('/lang/' + source_lang) + '/translate-text?api=' + api + '&source_lang=' + source_lang + '&target_lang=' + target_lang + (pronunciation === "on" ? "&pronunciation=true" : ""), {
           method: 'POST',
           headers: headers,
           body: JSON.stringify({
@@ -247,7 +247,7 @@ Breakdown:
     headers.append('Content-Type', `application/json`);
 
     try {
-      const response = await fetch(url + '/translate-text-stream?api=gpt&source_lang=' + source_lang + '&target_lang=' + target_lang, {
+      const response = await fetch(url + ('/lang/' + source_lang) + '/translate-text-stream?api=gpt&source_lang=' + source_lang + '&target_lang=' + target_lang, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify({

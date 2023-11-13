@@ -1,0 +1,7 @@
+dispatch:
+  - url: "*/lang/Japanese/*"
+    service: japanese
+  - url: "*/lang/*"
+    service: default
+  - url: "*/*"
+    service: default
