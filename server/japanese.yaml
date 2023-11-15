@@ -1,10 +1,10 @@
 runtime: python39
 instance_class: F4_1G
-service: default
+service: japanese
 entrypoint: gunicorn -t 60 -b :$PORT  main:app
 
 env_variables:
-  SERVICE_NAME: "default"
+  SERVICE_NAME: "japanese"
 
 handlers:
 - url: /.*

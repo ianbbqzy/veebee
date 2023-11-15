@@ -59,12 +59,11 @@ def authenticate(func):
     
     return wrapper
 
-# Replace with your actual keys
-
+service_name = os.getenv("SERVICE_NAME")
 app = Flask(__name__)
 CORS(app)
 users_service = UsersService(hard_limit=hard_limit)
-ocr_service = OCRService()
+ocr_service = OCRService(service_name=="japanese" or service_name=="default")
 translation_serivce = TranslationService(os.getenv("OPENAI_API_KEY"), os.getenv("DEEPL_API_KEY"))
 audio_service = AudioService()  # Initialize the new service
 
@@ -72,9 +71,9 @@ device = 'cpu'
 model_path = r'comic_text_detector/data/comictextdetector.pt.onnx'
 textDetector = TextDetector(model_path=model_path, input_size=1024, device=device, act='leaky')
 
-@app.route("/translate-text", methods=["POST"])
+@app.route("/lang/<language>/translate-text", methods=["POST"])
 @authenticate
-def translate_text(user_id):
+def translate_text(user_id, language):
     source_lang = request.args.get('source_lang')
     target_lang = request.args.get('target_lang', 'English')  # Added target_lang argument
     request_count, limit = users_service.get_request_count(user_id)
@@ -101,9 +100,9 @@ def translate_text(user_id):
     pronunciation = audio_service.generate_pronunciation(text, source_lang) if request.args.get('pronunciation') == 'true' else None
     return jsonify({"translation": translation, "pronunciation": pronunciation})  # Modified return
 
-@app.route("/translate-img", methods=["POST"])
+@app.route("/lang/<language>/translate-img", methods=["POST"])
 @authenticate
-def translate_img(user_id):
+def translate_img(user_id, language):
     source_lang = request.args.get('source_lang')
     target_lang = request.args.get('target_lang', 'English')  # Added target_lang argument
     request_count, limit = users_service.get_request_count(user_id)
@@ -134,9 +133,9 @@ def translate_img(user_id):
     pronunciation = audio_service.generate_pronunciation(text, source_lang) if request.args.get('pronunciation') == 'true' else None
     return jsonify({"translation": translation, "original": text, "pronunciation": pronunciation})  # Modified return
 
-@app.route("/translate-img-all", methods=["POST"])
+@app.route("/lang/<language>/translate-img-all", methods=["POST"])
 @authenticate
-def translate_img_all(user_id):
+def translate_img_all(user_id, language):
     source_lang = request.args.get('source_lang')
     target_lang = request.args.get('target_lang', 'English')  # Added target_lang argument
     request_count, limit = users_service.get_request_count(user_id)
@@ -178,6 +177,113 @@ def translate_img_all(user_id):
 
     return jsonify({'translations': results, "coordinates": coordinates, "scroll_x": scroll_x, "scroll_y": scroll_y})  # Modified return
 
+@app.route("/translate-text", methods=["POST"])
+@authenticate
+def translate_text_old(user_id):
+    source_lang = request.args.get('source_lang')
+    target_lang = request.args.get('target_lang', 'English')  # Added target_lang argument
+    request_count, limit = users_service.get_request_count(user_id)
+    if request_count > limit:
+        return jsonify({"error": f"You have exceeded your monthly request limit: {str(limit)}. Please consider donating at https://www.patreon.com/MangaReader276 to help with the server costs and get additional quota!"}), 403
+    users_service.increment_request_count(user_id)
+    text = request.json.get('text')
+    if source_lang not in ["Japanese", "Korean", "Chinese"]:
+        return jsonify({"error": "Unsupported language"}), 400
+    api = request.args.get('api')
+    if api == "gpt":
+        try:
+            translation = translation_serivce.call_gpt(text, source_lang, target_lang)  # Pass target_lang to the service
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+    elif api == "deepl":
+        try:
+            translation = translation_serivce.call_deepl(text, source_lang, target_lang)  # Pass target_lang to the service
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+    else:
+        return jsonify({"error": "Invalid API"}), 400
+    users_service.store_request_data(user_id, text, translation, "text", api)
+    pronunciation = audio_service.generate_pronunciation(text, source_lang) if request.args.get('pronunciation') == 'true' else None
+    return jsonify({"translation": translation, "pronunciation": pronunciation})  # Modified return
+
+@app.route("/translate-img", methods=["POST"])
+@authenticate
+def translate_img_old(user_id):
+    source_lang = request.args.get('source_lang')
+    target_lang = request.args.get('target_lang', 'English')  # Added target_lang argument
+    request_count, limit = users_service.get_request_count(user_id)
+    if request_count > limit:
+        return jsonify({"error": f"You have exceeded your monthly request limit: {str(limit)}. Please consider donating at https://www.patreon.com/MangaReader276 to help with the server costs and get additional quota!"}), 403
+    users_service.increment_request_count(user_id)
+    image_data_url = request.json.get('imageDataUrl')
+    if source_lang not in ["Japanese", "Korean", "Chinese"]:
+        return jsonify({"error": "Unsupported language"}), 400
+    try:
+        text = ocr_service.annotate_image(image_data_url, source_lang)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    api = request.args.get('api')
+    if api == "gpt":
+        try:
+            translation = translation_serivce.call_gpt(text, source_lang, target_lang)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+    elif api == "deepl":
+        try:
+            translation = translation_serivce.call_deepl(text, source_lang, target_lang)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+    else:
+        return jsonify({"error": "Invalid API"}), 400
+    users_service.store_request_data(user_id, text, translation, "image", api)
+    pronunciation = audio_service.generate_pronunciation(text, source_lang) if request.args.get('pronunciation') == 'true' else None
+    return jsonify({"translation": translation, "original": text, "pronunciation": pronunciation})  # Modified return
+
+@app.route("/translate-img-all", methods=["POST"])
+@authenticate
+def translate_img_all_old(user_id):
+    source_lang = request.args.get('source_lang')
+    target_lang = request.args.get('target_lang', 'English')  # Added target_lang argument
+    request_count, limit = users_service.get_request_count(user_id)
+    if request_count > limit:
+        return jsonify({"error": f"You have exceeded your monthly request limit: {str(limit)}. Please consider donating at https://www.patreon.com/MangaReader276 to help with the server costs and get additional quota!"}), 403
+    image_data_url = request.json.get('imageDataUrl')
+    scroll_x = request.json.get('scrollX')
+    scroll_y = request.json.get('scrollY')
+    coordinates = request.json.get('coordinates')
+    
+    api = request.args.get('api')
+    # Determine the function to call based on the api URL params
+    if api == "gpt":
+        translation_func = translation_serivce.call_gpt
+    elif api == "deepl":
+        translation_func = translation_serivce.call_deepl
+    else:
+        return jsonify({"error": "Invalid API"}), 400
+
+    try:
+        ocr_results = ocr_service.annotate_multiple_images(image_data_url, [coordinates['w'], coordinates['h']], model2annotations(textDetector, image_data_url, save_json=False), source_lang)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500  # Updated error response code
+
+    pronunciation = request.args.get('pronunciation')
+
+    results = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = []
+        for ocr_result in ocr_results:
+            futures.append(executor.submit(process_ocr_result, ocr_result, source_lang, target_lang, user_id, translation_func, api, pronunciation))
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                result = future.result()
+                results.append(result)
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500  # Updated error response code
+    users_service.increment_request_count(user_id, len(results))
+
+    return jsonify({'translations': results, "coordinates": coordinates, "scroll_x": scroll_x, "scroll_y": scroll_y})  # Modified return
+
+
 @app.route("/get-user-limit", methods=["GET"])
 @authenticate
 def get_user_limit(user_id):
@@ -195,9 +301,26 @@ def process_ocr_result(ocr_result, source_lang, target_lang, user_id, translatio
     ocr_result['pronunciation'] = pronunciation
     return ocr_result
 
+@app.route("/lang/<language>/translate-text-stream", methods=["POST"])
+@authenticate
+def translate_text_stream(user_id, language):
+    source_lang = request.args.get('source_lang')
+    target_lang = request.args.get('target_lang', 'English')
+    text = request.json.get('text')
+    if source_lang not in ["Japanese", "Korean", "Chinese"]:
+        return jsonify({"error": "Unsupported language"}), 400
+    api = request.args.get('api')
+    if api == "gpt":
+        try:
+            return Response(translation_serivce.call_gpt_stream(text, source_lang, target_lang), mimetype='text/event-stream')
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+    else:
+        return jsonify({"error": "Invalid API"}), 400
+    
 @app.route("/translate-text-stream", methods=["POST"])
 @authenticate
-def translate_text_stream(user_id):
+def translate_text_stream_old(user_id):
     source_lang = request.args.get('source_lang')
     target_lang = request.args.get('target_lang', 'English')
     text = request.json.get('text')
