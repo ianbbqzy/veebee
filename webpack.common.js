@@ -5,7 +5,7 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 var webpack = require('webpack');
 const NodePolyfillPlugin = require('node-polyfill-webpack-plugin')
 require('dotenv').config({ path: './.env' }); 
-
+const ReplaceInFileWebpackPlugin = require('replace-in-file-webpack-plugin')
 module.exports = {
   // Note: 
   // Chrome MV3 no longer allowed remote hosted code
@@ -75,6 +75,25 @@ module.exports = {
     new webpack.DefinePlugin({
       "process.env": JSON.stringify(process.env),
     }),
+
+    new ReplaceInFileWebpackPlugin([{
+      dir: 'dist',
+      files: ['options.js', 'signin.js', 'firebase_config.js'],
+      rules: [
+        {
+          search: 'https://apis.google.com/js/api.js?onload=${cbName}',
+          replace: '',
+        },
+        {
+          search: 'https://www.google.com/recaptcha/enterprise.js?render=',
+          replace: '',
+        },
+        {
+          search: 'https://www.googletagmanager.com/gtag/js',
+          replace: '',
+        },
+      ]
+    }]),
   ],
   output: {
     // chrome load uppacked extension looks for files under dist/* folder
