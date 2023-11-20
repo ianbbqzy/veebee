@@ -68,8 +68,8 @@ class TranslationService:
         }
 
         response = requests.post(url, data=data, headers=headers)
-        print(response)
         json_resp = response.json()
+        print(json_resp)
 
         if "message" in json_resp:
             return jsonify({"translation":  f"DeepL message: {json_resp['message']}"})
@@ -117,5 +117,9 @@ class TranslationService:
             stream=True,
         )
 
+        buffer = ""
         for message in completion:
-            yield message['choices'][0]['delta'].get("content", "")
+            content = message['choices'][0]['delta'].get("content", "")
+            buffer += content
+            yield content
+        print(buffer)

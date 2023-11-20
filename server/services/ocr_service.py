@@ -31,7 +31,7 @@ class OCRService:
         texts = response.text_annotations
         text = texts[0].description if len(texts) > 0 else ''
 
-        print(text)
+        print("google vision ocr: " + text)
         if source_lang == "Japanese" or source_lang == "Chinese":
             text = text.replace("\n", "")
         else:
@@ -50,6 +50,7 @@ class OCRService:
         image = Image.open(decoded_image_data)
 
         text = self.mocr(image)
+        print("manga ocr: " + text)
         return text
 
     def annotate_multiple_images(self, image_url, image_dim, bounding_boxes, source_lang):
@@ -121,7 +122,7 @@ def convert_box_to_pixel_values(box, image_dim):
     """
     center_x, center_y, width, height = box
     image_width, image_height = image_dim
-    print("image dimension", image_width, image_height)
+    # print("image dimension", image_width, image_height)
 
     pixel_center_x = center_x * image_width
     pixel_center_y = center_y * image_height
@@ -144,7 +145,7 @@ def crop_image_data_url(data_url, left, upper, right, lower, img_dim):
     image_data = base64.b64decode(base64_data)
     img = Image.open(io.BytesIO(image_data))
 
-    print(left, upper, right, lower)
+    # print(left, upper, right, lower)
     pillow_width, pillow_height = img.size
     image_width, image_height = img_dim
     ratio = pillow_width / image_width

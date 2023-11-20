@@ -85,6 +85,10 @@ module.exports = {
           replace: '',
         },
         {
+          search: 'https://apis.google.com/js/api.js?onload=${e}',
+          replace: '',
+        },
+        {
           search: 'https://www.google.com/recaptcha/enterprise.js?render=',
           replace: '',
         },

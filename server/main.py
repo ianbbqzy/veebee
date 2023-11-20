@@ -36,7 +36,7 @@ def authenticate(func):
             try:
                 return func(*args, **kwargs)
             except Exception as e:
-                print(e)
+                print("authenticate error: " + e)
                 return jsonify({'error': 'An error occurred while processing your request.'}), 500
         
         if not auth_header:
@@ -54,7 +54,7 @@ def authenticate(func):
             
             return func(*args, **kwargs)
         except (auth.InvalidIdTokenError, IndexError, ValueError, exceptions.RequestException) as e:
-            print(e)
+            print("invalid id token error: " + e)
             return jsonify({'error': 'Token might have expired. Please sign in again.'}), 401
     
     return wrapper
