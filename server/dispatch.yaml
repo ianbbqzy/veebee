@@ -1,6 +1,10 @@
 dispatch:
   - url: "*/lang/Japanese/*"
     service: japanese
+  - url: "*/lang/Korean/translate-img-all"
+    service: japanese
+  - url: "*/lang/Chinese/translate-img-all"
+    service: japanese
   - url: "*/lang/*"
     service: default
   - url: "*/*"

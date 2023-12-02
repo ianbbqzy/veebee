@@ -36,7 +36,7 @@ def authenticate(func):
             try:
                 return func(*args, **kwargs)
             except Exception as e:
-                print("authenticate error: " + e)
+                print("authenticate error: " + str(e))
                 return jsonify({'error': 'An error occurred while processing your request.'}), 500
         
         if not auth_header:
@@ -54,7 +54,7 @@ def authenticate(func):
             
             return func(*args, **kwargs)
         except (auth.InvalidIdTokenError, IndexError, ValueError, exceptions.RequestException) as e:
-            print("invalid id token error: " + e)
+            print("invalid id token error: " + str(e))
             return jsonify({'error': 'Token might have expired. Please sign in again.'}), 401
     
     return wrapper
@@ -63,13 +63,15 @@ service_name = os.getenv("SERVICE_NAME")
 app = Flask(__name__)
 CORS(app)
 users_service = UsersService(hard_limit=hard_limit)
-ocr_service = OCRService(service_name=="japanese" or service_name=="default")
+ocr_service = OCRService(service_name=="japanese")
 translation_serivce = TranslationService(os.getenv("OPENAI_API_KEY"), os.getenv("DEEPL_API_KEY"))
 audio_service = AudioService()  # Initialize the new service
 
 device = 'cpu'
 model_path = r'comic_text_detector/data/comictextdetector.pt.onnx'
-textDetector = TextDetector(model_path=model_path, input_size=1024, device=device, act='leaky')
+textDetector = None
+if service_name == 'japanese':
+    textDetector = TextDetector(model_path=model_path, input_size=1024, device=device, act='leaky')
 
 @app.route("/lang/<language>/translate-text", methods=["POST"])
 @authenticate

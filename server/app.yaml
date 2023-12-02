@@ -1,5 +1,5 @@
 runtime: python39
-instance_class: F4_1G
+instance_class: F2
 service: default
 entrypoint: gunicorn -t 60 -b :$PORT  main:app
 
